@@ -34,14 +34,14 @@ public class MainController extends HttpServlet {
             }
         } else {
             req.setAttribute("loginError", LOGIN_ERROR);
-            req.getRequestDispatcher("jsp/main.jsp").forward(req, resp);
+            req.getRequestDispatcher("WEB-INF/jsp/main.jsp").forward(req, resp);
         }
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         getCookie(req);
-        resp.sendRedirect("jsp/main.jsp");
+        resp.sendRedirect("WEB-INF/jsp/main.jsp");
     }
 
     private User authorize(String login, String pass) {

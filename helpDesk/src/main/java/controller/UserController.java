@@ -83,13 +83,13 @@ public class UserController extends HttpServlet {
         req.getSession().setAttribute("questionTitle", question.getTitle());
         req.getSession().setAttribute("questionContent", question.getQuestion());
         req.getSession().setAttribute("questionEdit", question);
-        req.getRequestDispatcher("jsp/editQuestion.jsp").forward(req, resp);
+        req.getRequestDispatcher("WEB-INF/jsp/editQuestion.jsp").forward(req, resp);
     }
 
     private void showUserCabinet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User user = (User) req.getSession().getAttribute("user");
         createQuestionsTable(user.getLogin(), req);
-        req.getRequestDispatcher("jsp/user.jsp").forward(req, resp);
+        req.getRequestDispatcher("WEB-INF/jsp/user.jsp").forward(req, resp);
     }
 
     private void submitNewQuestion(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

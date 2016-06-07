@@ -29,7 +29,7 @@ public class EmployeeController extends HttpServlet {
             createNewAnswer(req, resp);
         } else {
             req.getSession().setAttribute("questionsTable", createQuestionsTable());
-            req.getRequestDispatcher("jsp/employee.jsp").forward(req, resp);
+            req.getRequestDispatcher("WEB-INF/jsp/employee.jsp").forward(req, resp);
         }
     }
 
@@ -47,10 +47,10 @@ public class EmployeeController extends HttpServlet {
             questionService.update(question);
             req.getSession().setAttribute("message", ANSWER_CREATED);
             req.getSession().setAttribute("questionsTable", createQuestionsTable());
-            req.getRequestDispatcher("jsp/employee.jsp").forward(req, resp);
+            req.getRequestDispatcher("WEB-INF/jsp/employee.jsp").forward(req, resp);
         } else {
             req.getSession().setAttribute("message", ANSWER_TOO_SHORT);
-            req.getRequestDispatcher("jsp/answerQuestion.jsp").forward(req, resp);
+            req.getRequestDispatcher("WEB-INF/jsp/answerQuestion.jsp").forward(req, resp);
         }
     }
 
@@ -62,7 +62,7 @@ public class EmployeeController extends HttpServlet {
         req.getSession().setAttribute("questionTheme", question.getTheme().getTheme());
         req.getSession().setAttribute("questionAskedBy", question.getAskedByUser().getLogin());
         req.getSession().setAttribute("questionContent", question.getQuestion());
-        req.getRequestDispatcher("jsp/answerQuestion.jsp").forward(req, resp);
+        req.getRequestDispatcher("WEB-INF/jsp/answerQuestion.jsp").forward(req, resp);
     }
 
     private String createQuestionsTable() {

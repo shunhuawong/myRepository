@@ -27,7 +27,7 @@ public class RegisterController extends HttpServlet {
         String pass = req.getParameter("passReg");
         if (isLoginOccupied(login)) {
             req.setAttribute("loginError", LOGIN_OCCUPIED_ERROR);
-            req.getRequestDispatcher("jsp/main.jsp").forward(req, res);
+            req.getRequestDispatcher("WEB-INF/jsp/main.jsp").forward(req, res);
         } else {
             User user = createUser(login, pass);
             if(user != null) {

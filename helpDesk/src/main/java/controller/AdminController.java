@@ -89,7 +89,7 @@ public class AdminController extends HttpServlet{
 
     private void showAdminCabinet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.getSession().setAttribute("questionsTable", createQuestionsTable());
-        req.getRequestDispatcher("jsp/admin.jsp").forward(req, resp);
+        req.getRequestDispatcher("WEB-INF/jsp/admin.jsp").forward(req, resp);
     }
 
     private void showReviewPage(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -99,6 +99,6 @@ public class AdminController extends HttpServlet{
         req.getSession().setAttribute("questionContent", question.getQuestion());
         req.getSession().setAttribute("questionEdit", question);
         req.getSession().setAttribute("droplist", createDropList());
-        req.getRequestDispatcher("jsp/reviewQuestion.jsp").forward(req, resp);
+        req.getRequestDispatcher("WEB-INF/jsp/reviewQuestion.jsp").forward(req, resp);
     }
 }
