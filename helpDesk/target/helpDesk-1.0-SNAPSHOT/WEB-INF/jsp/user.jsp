@@ -6,17 +6,23 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Insert title here</title>
   <link rel="stylesheet" type="text/css" href="../css/style.css">
+  <script type="text/javascript" src="../js/jquery.min.js"></script>
+  <script type="text/javascript" src="../js/my.js"></script>
 </head>
 <body id="center">
-<div>
+<div align="center">
+
   <% String st = (String)request.getSession().getAttribute("message"); if(st != null)out.println(st); %>
   <br>
   <br>
-  <form action="/user" method="post" style="width: 60%; margin: 0 auto; padding: 10px;">
-    <p><strong>Enter your question:</strong></p>
+  <form action="/user" method="post">
+    <p><b>Enter your question:</b></p>
     <p><input type="text" name="newQuestionTitle" placeholder="Title" size="43"></p>
+    <br>
     <p><textarea rows="10" cols="45" name="newQuestionText" placeholder="Enter your question here"></textarea></p>
+    <br>
     <p><input type="submit" name="submit" value="Submit"></p>
+    <br><br>
     <% String s = (String)request.getSession().getAttribute("questionsTable"); if(s != null)out.println(s); %>
   </form>
 </div>

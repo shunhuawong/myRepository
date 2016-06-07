@@ -6,6 +6,8 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Insert title here</title>
   <link rel="stylesheet" type="text/css" href="../css/style.css">
+  <script type="text/javascript" src="../js/jquery.min.js"></script>
+  <script type="text/javascript" src="../js/my.js"></script>
 </head>
 <body id="center">
 <div align="center">

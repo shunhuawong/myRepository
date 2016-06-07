@@ -28,7 +28,6 @@ input[placeholder] {
     margin: 0 auto ;
     display:none;
 }
-
 #authForm{
     display:inline-block;
 }
@@ -39,13 +38,4 @@ input[placeholder] {
 #center{
     padding: 40px; /* Поля вокруг текста */
     background: lightblue;
-    align-items: center;
 }
-
-.aligned {
-    border: 1px solid;
-    margin: 0 auto;
-    width: 60% !important;
-    padding: 10px;
-}
-
