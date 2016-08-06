@@ -1,0 +1,17 @@
+{namespace JIRA.Templates.ProjectPermissions}
+
+/**
+ */
+{template .success}
+    {call aui.page.document}
+        {param windowTitle: getText('admin.projects.editpermissions.title') /}
+        {param headContent}
+            <meta name="decorator" content="admin" />
+            <meta name="admin.active.section" content="admin_issues_menu/misc_schemes_section"/>
+            <meta name="admin.active.tab" content="permission_schemes"/>
+        {/param}
+        {param content}
+            <div class="project-permissions-container"></div>
+        {/param}
+    {/call}
+{/template}

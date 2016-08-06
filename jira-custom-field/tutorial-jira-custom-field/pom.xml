@@ -10,7 +10,7 @@
         <url>http://www.example.com/</url>
     </organization>
     <name>tutorial-jira-custom-field</name>
-    <description>Provides a custom field to store money amounts.</description>
+    <description>Allows user to enter a positive integer.</description>
     <packaging>atlassian-plugin</packaging>
     <dependencies>
         <dependency>
@@ -19,16 +19,14 @@
             <version>${jira.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Add dependency on jira-core if you want access to JIRA implementation classes as well as the sanctioned API. -->
-        <!-- This is not normally recommended, but may be required eg when migrating a plugin originally developed against JIRA 4.x -->
-        <!--
+
         <dependency>
             <groupId>com.atlassian.jira</groupId>
             <artifactId>jira-core</artifactId>
             <version>${jira.version}</version>
             <scope>provided</scope>
         </dependency>
-        -->
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

@@ -1,0 +1,18 @@
+#disable_html_escaping()
+
+#set ($avatarSize = "small")
+
+#if ($username)
+    #if ($user)
+        <span class="user-hover" id="$!{id}_${textutils.htmlEncode($username)}" rel="$textutils.htmlEncode($username)" data-user='$textutils.htmlEncode(${userAsJson.toString()})'>
+            #parse("/templates/plugins/userformat/avatarOnly.vm")
+            $textutils.htmlEncode($fullname)
+        </span>
+    #else
+        #parse("/templates/plugins/userformat/avatarOnly.vm")
+        $textutils.htmlEncode($username)
+    #end
+#else
+    #parse("/templates/plugins/userformat/avatarOnly.vm")
+    $defaultFullName
+#end

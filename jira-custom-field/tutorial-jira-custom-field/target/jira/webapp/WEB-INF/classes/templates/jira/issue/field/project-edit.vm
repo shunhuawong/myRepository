@@ -1,0 +1,6 @@
+#disable_html_escaping()
+#customControlHeader ($action "$!{displayParameters.fieldNamePrefix}$field.id" $i18n.getText($field.nameKey) true $displayParameters $auiparams)
+<input data-container-class="project-ss" type="text" class="project-field" value="$!textutils.htmlEncode($project.toString())"
+       id="$!{displayParameters.fieldNamePrefix}$field.id" name="$!{displayParameters.fieldNamePrefix}pid"/>
+<div id="$!{displayParameters.fieldNamePrefix}${field.id}-options" data-suggestions="$textutils.htmlEncode($projectGroupsJson)"></div>
+#customControlFooter ($action "$!{displayParameters.fieldNamePrefix}$field.id" "" $displayParameters $auiparams)

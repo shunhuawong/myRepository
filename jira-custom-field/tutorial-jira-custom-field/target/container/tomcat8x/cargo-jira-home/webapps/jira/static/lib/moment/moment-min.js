@@ -1,0 +1,1 @@
+define("jira/moment",["jira/moment/moment.lib","jira/moment/moment.jira.i18n"],function(moment,i18n){return moment});

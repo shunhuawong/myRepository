@@ -1,0 +1,56 @@
+{namespace JIRA.Templates.Banner}
+
+/**
+ * Render recovery mode warning.
+ * @param helpUrl the URL of the websudo help.
+ * @param isAdmin true when the current user is an admin.
+ * @param isRecoveryAdmin true when the current use is the `recovery admin`.
+ */
+{template .recoveryBanner}
+    {let $help}<a target="_blank" href="{$helpUrl}">{/let}
+    {let $end}</a>{/let}
+    {call aui.message.warning}
+        {param content}
+            {if $isRecoveryAdmin}
+                {getText('jira.recoverymode.recovery.banner', $help, $end)|noAutoescape}
+            {elseif $isAdmin}
+                {getText('jira.recoverymode.admin.banner', $help, $end)|noAutoescape}
+            {/if}
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * Render the websudo warning on the top of JIRA.
+ * @param helpUrl the URL of the websudo help.
+ * @param websudoRequest true if the current page is websudo protected.
+ */
+{template .webSudoBanner}
+    {let $drop}<a id="websudo-drop-from-{if $websudoRequest}protected{else}normal{/if}-page" href="#">{/let}
+    {let $help}<a target="_blank" href="{$helpUrl}"/>{/let}
+    {let $end}</a>{/let}
+    {call aui.message.warning}
+        {param content}{getText('websudo.enabled.message', $drop, $end, $help, $end)|noAutoescape}{/param}
+        {param id: 'websudo-banner'/}
+    {/call}
+{/template}
+
+/**
+* Render users exceeded error banner.
+* @param baseUrl context path
+* @param justOne true if user has been exceeded only for one role
+* @param? roleName if moreThanOne was false, this parameter must contain name of the affected role. Empty otherwise.
+* @param? roleKey  if moreThanOne was false, this parameter must contain key of the affected role. Empty otherwise.
+*/
+{template .usersExceededBannerMessage}
+    {let $manageAppsUrl}<a href="{$baseUrl}/plugins/servlet/applications/versions-licenses" id="exceeded-banner-mac-link">{/let}
+    <div class="aui-banner aui-banner-error" role="banner">
+        {if $justOne}
+            {let $manageUsersUrl}<a href="{$baseUrl}/secure/admin/user/UserBrowser.jspa?applicationFilter={$roleKey}" id="exceeded-banner-access-link">{/let}
+            {getText('admin.globalpermissions.user.limit.single.error', $roleName, $manageUsersUrl,'</a>', $manageAppsUrl, '</a>')|noAutoescape}
+        {else}
+            {let $manageUsersUrl}<a href="{$baseUrl}/secure/admin/user/UserBrowser.jspa" id="exceeded-banner-access-link">{/let}
+            {getText('admin.globalpermissions.user.limit.multiple.error', $manageUsersUrl,'</a>', $manageAppsUrl, '</a>')|noAutoescape}
+        {/if}
+    </div>
+{/template}

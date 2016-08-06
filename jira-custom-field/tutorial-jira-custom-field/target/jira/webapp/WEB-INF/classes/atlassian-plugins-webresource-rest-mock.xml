@@ -1,0 +1,17 @@
+<atlassian-plugin name="Atlassian Plugins - Web Resources - REST Plugin" key="com.atlassian.plugins.atlassian-plugins-webresource-rest">
+    <!--
+    This file is just a mock to enable dependent webresources to depend on WRM while not having the possibility to
+    dynamically load resources (all dependent modules must be explicitly defined).
+    -->
+    <plugin-info>
+        <description>A mock of com.atlassian.plugins.atlassian-plugins-webresource-rest</description>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+        <version>3.1.5</version>
+    </plugin-info>
+
+    <web-resource key="web-resource-manager">
+        <dependency>jira.webresources:almond</dependency>
+
+        <resource type="download" name="setup-wrm-mock.js" location="js/setup-wrm-require-mock.js"/>
+    </web-resource>
+</atlassian-plugin>

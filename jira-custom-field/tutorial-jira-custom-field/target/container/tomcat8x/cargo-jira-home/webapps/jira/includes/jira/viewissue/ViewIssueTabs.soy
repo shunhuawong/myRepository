@@ -1,0 +1,23 @@
+{namespace JIRA.Templates.Issue.Tabs}
+
+
+/**
+ * @param text
+ */
+{template .label}
+    <strong>{$text}</strong>
+{/template}
+
+/**
+ * @param id
+ * @param href
+ * @param linkClass
+ * @param text
+ */
+{template .tab}
+    <a id="{$id}" href="{$href}" class="{$linkClass}">
+        {call .label}
+            {param text: $text /}
+        {/call}
+    </a>
+{/template}

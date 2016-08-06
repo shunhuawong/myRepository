@@ -1,0 +1,128 @@
+{namespace JIRA.Templates.RenaissanceMigration}
+
+/**
+ *
+ * @param productName
+ * @param productVersion
+ * @param? notMigratedGroups
+ * @param notDefinedRoles
+ */
+{template .success}
+    {let $migrationHubUrl}https://confluence.atlassian.com/migration/jira-7{/let}
+
+    {call aui.page.document}
+        {param pageType: 'focused' /}
+        {param pageSize: 'xlarge' /}
+        {param windowTitle: getText('renaissance.migration.summary.welcome', $productName) /}
+        {param headContent}
+            <meta name="decorator" content="onboarding" />
+        {/param}
+        {param extraClasses: 'renaissance-migration-summary' /}
+        {param content}
+        <div id="migrationSummary" class="aui-page-panel">
+            <div class="aui-page-panel-inner">
+                <section class="aui-page-panel-content">
+                    <h2>{getText('renaissance.migration.summary.welcome', $productName)}</h2>
+                    <h3>{getText('renaissance.migration.summary.update.success', $productName, $productVersion)}</h3>
+
+                    {let $hasNotMigratedGroups: isNonnull($notMigratedGroups) and length($notMigratedGroups) > 0 /}
+                    {let $hasNotDefinedRoles: isNonnull($notDefinedRoles) and length($notDefinedRoles) > 0 /}
+                    {let $userActionNeeded: $hasNotMigratedGroups or $hasNotDefinedRoles /}
+                    {let $hasMigrationErrors: $hasNotMigratedGroups /}
+                    {let $versionsLicensesHref: '<a href="'+contextPath()+'/plugins/servlet/applications/versions-licenses" target="_blank">'/}
+                    {let $applications}
+                        {foreach $role in $notDefinedRoles}
+                            {if not isFirst($role)}, {/if}{$role.name}
+                        {/foreach}
+                    {/let}
+
+                    {if $userActionNeeded}
+                        {if $hasMigrationErrors}
+                            <p>{getText('renaissance.migration.summary.update.almost')}</p>
+                            <ol>
+                                {if $hasNotDefinedRoles}
+                                    <li id="notDefinedRoles">
+                                        {if length($notDefinedRoles) > 1}
+                                            {getText('renaissance.migration.summary.install.undefined.applications.with.errors', $versionsLicensesHref,'</a>', $applications)|noAutoescape}
+                                        {else}
+                                            {getText('renaissance.migration.summary.install.undefined.application.with.errors', '<a href="'+contextPath()+'/plugins/servlet/applications/versions-licenses">','</a>', $applications)|noAutoescape}
+                                        {/if}
+                                    </li>
+                                {/if}
+                                {if $hasNotMigratedGroups}
+                                    <li>
+                                        <p>{getText('renaissance.migration.summary.update.servicedesk.warn.title', '<a href="https://confluence.atlassian.com/display/Migration/My+agents+weren%27t+all+migrated+when+I+upgraded" target="_blank">', '</a>')|noAutoescape}</p>
+                                        <p>{getText('renaissance.migration.summary.update.servicedesk.warn.description', '<a href="' + contextPath()+'/secure/admin/ApplicationAccess.jspa' + '" target="_blank">', '</a>')|noAutoescape}</p>
+                                        <p>{getText('renaissance.migration.summary.update.servicedesk.warn.group')}</p>
+                                        <ul id="notMigratedGroups" target="_blank">
+                                            {foreach $group in $notMigratedGroups}
+                                                <li>{$group}</li>
+                                            {/foreach}
+                                        </ul>
+                                    </li>
+                                {/if}
+                            </ol>
+                        {else}
+                            <p>
+                                {if length($notDefinedRoles) > 1}
+                                    {getText('renaissance.migration.summary.install.undefined.applications', $versionsLicensesHref,'</a>', $applications)|noAutoescape}
+                                {else}
+                                    {getText('renaissance.migration.summary.install.undefined.application', '<a href="'+contextPath()+'/plugins/servlet/applications/versions-licenses">','</a>', $applications)|noAutoescape}
+                                {/if}
+                            </p>
+                        {/if}
+                    {else}
+                        <p>{getText('renaissance.migration.summary.update.allset')}</p>
+                    {/if}
+                    <h4 class="changelist-heading">{getText('renaissance.migration.summary.whatchanged.title')}</h4>
+                    <p>{getText('renaissance.migration.summary.whatchanged.description', '<a href="' + $migrationHubUrl + '" target="_blank">', '</a>')|noAutoescape}</p>
+                    <div class="aui-group changelist">
+                        <div class="aui-item">
+                          <a href="{$migrationHubUrl}" target="_blank">
+                            <img src="{contextPath()}/images/upgrade/whats-new.svg" alt="">
+                            <h4>{getText('renaissance.migration.summary.item.whatsnew.title')}</h4>
+                          </a>
+                          <p>{getText('renaissance.migration.summary.item.whatsnew.description')}</p>
+                        </div>
+                        <div class="aui-item">
+                          <a href="{$migrationHubUrl}" target="_blank">
+                            <img src="{contextPath()}/images/upgrade/administration.svg" alt="">
+                            <h4>{getText('renaissance.migration.summary.item.admin.title')}</h4>
+                          </a>
+                          <p>{getText('renaissance.migration.summary.item.admin.description')}</p>
+                        </div>
+                        <div class="aui-item">
+                          <a href="{$migrationHubUrl}" target="_blank">
+                            <img src="{contextPath()}/images/upgrade/licensing.svg" alt="">
+                            <h4>{getText('renaissance.migration.summary.item.license.title')}</h4>
+                          </a>
+                          <p>{getText('renaissance.migration.summary.item.license.description')}</p>
+                        </div>
+                        <div class="aui-item">
+                          <a href="{$migrationHubUrl}" target="_blank">
+                            <img src="{contextPath()}/images/upgrade/user-management.svg" alt="">
+                            <h4>{getText('renaissance.migration.summary.item.um.title')}</h4>
+                          </a>
+                          <p>{getText('renaissance.migration.summary.item.um.description')}</p>
+                        </div>
+                        <div class="aui-item">
+                          <a href="{$migrationHubUrl}" target="_blank">
+                            <img src="{contextPath()}/images/upgrade/migration-guide.svg" alt="">
+                            <h4>{getText('renaissance.migration.summary.item.migration.title')}</h4>
+                          </a>
+                          <p>{getText('renaissance.migration.summary.item.migration.description')}</p>
+                        </div>
+                    </div>
+                    <div class="buttons-container right">
+                        <div class="buttons">
+                           <a id="continueButton" class="aui-button aui-button-primary" href="{contextPath()}/secure/MigrationSummary.jspa?dismiss=true">
+                                {getText('renaissance.migration.summary.button')}
+                           </a>
+                       </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        {/param}
+    {/call}
+{/template}

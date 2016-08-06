@@ -1,0 +1,1 @@
+define("jira/project/permissions/permissiongroupmodel",["backbone"],function(Backbone){return Backbone.Model.extend({defaults:{heading:"",permissions:[]}})});

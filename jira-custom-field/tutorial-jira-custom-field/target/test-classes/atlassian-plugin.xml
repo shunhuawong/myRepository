@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="com.example.plugins.tutorial.jira.tutorial-jira-custom-field-tests" name="tutorial-jira-custom-field" plugins-version="2">
+  <plugin-info>
+    <description>Provides a custom field to store money amounts.</description>
+    <version>1.0-SNAPSHOT</version>
+    <vendor name="Example Company" url="http://www.example.com/"/>
+  </plugin-info>
+  <!-- from our base plugin -->
+  <component-import key="myComponent" interface="com.example.plugins.tutorial.jira.customfields.api.MyPluginComponent"/>
+  <!-- from the product container -->
+  <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
+  <component key="my-component-wired-test" class="it.com.example.plugins.tutorial.jira.customfields.MyComponentWiredTest" public="true">
+    <interface>it.com.example.plugins.tutorial.jira.customfields.MyComponentWiredTest</interface>
+    <service-properties>
+      <entry key="inProductTest" value="true"/>
+    </service-properties>
+  </component>
+</atlassian-plugin>

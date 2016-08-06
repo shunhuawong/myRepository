@@ -1,0 +1,109 @@
+<!--
+  All linkId atributes of link elements must not contain spaces!
+  Reason: linkIds are used for window names for pop-ups. See JRA-12387 for more details.
+-->
+<atlassian-plugin name='User Navigation Bar Sections' key='jira.webfragments.user.navigation.bar' i18n-name-key="webfragments.user.navigation.bar.plugin.name">
+    <plugin-info>
+        <description key="webfragments.user.navigation.bar.plugin.desc">This library includes the web fragments for the top right user navigation bar. This should not be disabled</description>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+        <application-version min="3.7" max="4.3"/>
+        <version>1.0</version>
+    </plugin-info>
+
+    <web-section key="personal" name="Personal Section" location="system.user.options" i18n-name-key="webfragments.user.options.section.personal.name"  weight="100"/>
+
+        <web-item key="view_profile" name="View Users Profile" section="system.user.options/personal" i18n-name-key="webfragments.user.options.item.view.profile"  weight="10">
+            <label key="common.concepts.profile" />
+            <tooltip key="tooltip.profile" />
+            <link linkId="view_profile">/secure/ViewProfile.jspa</link>
+            <condition class="com.atlassian.jira.plugin.webfragment.conditions.UserLoggedInCondition" />
+        </web-item>
+
+    <web-section key="jira-help" name="Help Section" location="system.user.options" i18n-name-key="webfragments.user.options.section.help.name"  weight="200"/>
+
+        <web-item key="view_core_help" name="View Core help" section="system.user.options/jira-help" weight="450">
+            <label key="jira.core.help" />
+            <tooltip key="jira.core.tooltip" />
+            <link linkId="view_core_help">$coreHelpUrl</link>
+            <param name="target" value="_blank"/>
+            <context-provider class="com.atlassian.jira.plugin.webfragment.contextproviders.HelpContextProvider" />
+        </web-item>
+
+        <web-item key="view_admin_help" name="View admin help" section="system.user.options/jira-help" weight="460">
+            <label key="jira.admin.help" />
+            <tooltip key="jira.admin.tooltip" />
+            <link linkId="view_admin_help">$helpUrls.getUrl('admin_default').url</link>
+            <param name="target" value="_blank"/>
+            <context-provider class="com.atlassian.jira.plugin.webfragment.contextproviders.HelpContextProvider" />
+                <condition class="com.atlassian.jira.plugin.webfragment.conditions.IsAdminCondition"/>
+        </web-item>
+
+        <web-item key="view_cloud_admin_help" name="Atlassian Cloud admin help" section="system.user.options/jira-help" weight="470">
+            <label key="jira.cloud.admin.help" />
+            <tooltip key="jira.cloud.admin.tooltip" />
+            <link linkId="view_cloud_admin_help">$helpUrls.getUrl('cloud_admin_default').url</link>
+            <param name="target" value="_blank"/>
+            <context-provider class="com.atlassian.jira.plugin.webfragment.contextproviders.HelpContextProvider" />
+            <conditions type="AND">
+                <condition class="com.atlassian.jira.plugin.webfragment.conditions.IsAdminCondition"/>
+                <condition class="com.atlassian.jira.plugin.webfragment.conditions.IsOnDemandCondition"/>
+            </conditions>
+        </web-item>
+
+        <web-item key="view_keyshortscuthelp" name="View Key Shortcuts" section="system.user.options/jira-help" i18n-name-key="webfragments.user.options.item.about.keyshortscuthelp"  weight="480">
+            <label key="about.jira.keyshortscuthelp.name" />
+            <tooltip key="about.jira.keyshortscuthelp.tooltip" />
+            <link linkId="keyshortscuthelp">/secure/ViewKeyboardShortcuts!default.jspa</link> <!-- this url is never used.  Its is ovrrriden via JS later -->
+            <param name="target" value="_blank"/>
+        </web-item>
+
+        <web-item key="view_about" name="View About" section="system.user.options/jira-help" i18n-name-key="webfragments.user.options.item.about.name"  weight="500">
+            <label key="about.jira.name" />
+            <tooltip key="about.jira.tooltip" />
+            <link linkId="view_about">/secure/AboutPage.jspa</link>
+        </web-item>
+
+        <web-item key="view_credits" name="View Credits" section="system.user.options/jira-help" i18n-name-key="webfragments.user.options.item.credits.name"  weight="600">
+            <label key="jira.credits" />
+            <tooltip key="jira.credits.tooltip" />
+            <link linkId="view_credits">/secure/JiraCreditsPage!default.jspa</link>
+            <param name="target" value="_blank"/>
+            <condition class="com.atlassian.jira.plugin.webfragment.conditions.IsBrowserCondition" invert="true">
+                <param name="browser">msie</param>
+                <param name="lessThan">8</param>
+            </condition>
+        </web-item>
+
+    <web-section key="system" name="System Section" location="system.user.options" i18n-name-key="webfragments.user.options.section.system.name"  weight="300">
+        <condition class="com.atlassian.jira.plugin.webfragment.conditions.UserLoggedInCondition" />
+    </web-section>
+
+        <web-item key="log_out" name="Log out of JIRA" section="system.user.options/system" i18n-name-key="webfragments.user.options.item.log.out"  weight="50">
+            <label key="common.concepts.logout" />
+            <tooltip key="tooltip.logout" />
+            <link linkId="log_out">/logout?atl_token=${atl_token}</link>
+            <condition class="com.atlassian.jira.plugin.webfragment.conditions.UserLoggedInCondition" />
+        </web-item>
+
+    <web-resource key="jira-credits-web-resource">
+        <!--CSS-->
+        <resource type="download" name="credits.css" location="/jiracredits/styles/credits.css" />
+        <!--IMAGES-->
+        <resource type="download" name="cursor_32_lt.gif" location="/jiracredits/images/cursor_32_lt.gif" />
+        <resource type="download" name="grass.gif" location="/jiracredits/images/grass.gif" />
+        <resource type="download" name="hand.gif" location="/jiracredits/images/hand.gif" />
+        <resource type="download" name="jiravii_title_03.gif" location="/jiracredits/images/jiravii_title_03.gif" />
+        <resource type="download" name="map.gif" location="/jiracredits/images/map.gif" />
+        <!--SOUNDS-->
+        <resource type="download" name="select1.wav" location="/jiracredits/sounds/select1.wav" />
+        <resource type="download" name="select2.wav" location="/jiracredits/sounds/select2.wav" />
+        <resource type="download" name="turnoff1.wav" location="/jiracredits/sounds/turnoff1.wav" />
+        <resource type="download" name="turnon1.wav" location="/jiracredits/sounds/turnon1.wav" />
+        <!--JS-->
+        <resource type="download" name="raw_users.js" location="/jiracredits/scripts/raw_users.js" />
+        <resource type="download" name="raw_positions.js" location="/jiracredits/scripts/raw_positions.js" />
+        <resource type="download" name="contributors.js" location="/jiracredits/scripts/contributors.js" />
+        <resource type="download" name="credits.js" location="/jiracredits/scripts/credits.js" />
+    </web-resource>
+
+</atlassian-plugin>

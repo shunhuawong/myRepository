@@ -1,0 +1,308 @@
+{namespace JIRA.Templates.Project.Browse}
+
+
+/**
+ * Browse projects page.
+ *
+ * @param operationLinks links registered for browse projects page
+ * @param infoPanelHtml web panel registered for browse project page
+ */
+{template .page}
+    {call aui.page.document}
+        {param windowTitle}{getText('browseprojects.title')}{/param}
+        {param content}
+            {call aui.page.pageHeader}
+                {param content}
+                    {call aui.page.pageHeaderMain}
+                        {param content}<h1>{getText('browseprojects.title')}</h1>{/param}
+                    {/call}
+                    {if $operationLinks}
+                        {call aui.page.pageHeaderActions}
+                            {param content}
+                                {foreach $link in $operationLinks}
+                                    <a href="{$link.url}" class="aui-button {$link.styleClass}" id="{$link.id}"
+                                        title="{$link.title}">{$link.label}</a>
+                                {/foreach}
+                            {/param}
+                        {/call}
+                    {/if}
+                {/param}
+            {/call}
+            {call aui.page.pagePanel}
+                {param id: 'browse-projects-page' /}
+                {param content}
+                    {call aui.page.pagePanelNav}
+                        {param content}
+                            <div class="project-type-nav"></div>
+                            <div class="category-nav"></div>
+                        {/param}
+                    {/call}
+                    {call aui.page.pagePanelContent}
+                        {param content}
+                            {$infoPanelHtml|noAutoescape}
+                            <div class="module">
+                                <div class="mod-header" id="filter-projects"></div>
+                                <div class="mod-content" id="projects"></div>
+                            </div>
+                            <div id="pagination"></div>
+                        {/param}
+                    {/call}
+                {/param}
+            {/call}
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * Sidebar list of project types used to filter results
+ *
+ * @param items list of project types to display
+ */
+{template .projectTypesTabs}
+    <ul class="project-types-filters vertical tabs">
+    <h2 class="browse-project-group-heading"><span>{getText('browseprojects.project.types')}</span></h2>
+        {foreach $item in $items}
+            <li id="{$item.key}-project-type" class="{if isFirst($item)}first{/if} {if $item.selected}active{/if}">
+                <a rel="{$item.id}" href="{contextPath()}/secure/BrowseProjects.jspa?selectedProjectType={$item.key}">
+                {if ($item.icon)}
+                    <img class="project-type-icon" src="data:image/svg+xml;base64, {$item.icon} "/>
+                {/if}
+                <strong>{$item.formattedKey}</strong>
+                </a>
+            </li>
+        {/foreach}
+    </ul>
+{/template}
+
+/**
+ * Sidebar list of categories used to filter results
+ *
+ * @param items list of categories to display
+ */
+{template .tabs}
+    <ul class="vertical tabs">
+        <h2 class="browse-project-group-heading"><span>{getText('browseprojects.categories')}</span></h2>
+        {foreach $item in $items}
+            <li id="{$item.id}-panel-tab" class="{if isFirst($item)}first{/if} {if $item.selected}active{/if}">
+                <a id="{$item.id}-panel-tab-lnk" rel="{$item.id}" title="{$item.description}" href="{contextPath()}/secure/BrowseProjects.jspa?selectedCategory={$item.id}">
+                    <strong>{$item.name}</strong>
+                </a>
+            </li>
+        {/foreach}
+    </ul>
+{/template}
+
+/**
+ * Header and filter form
+ *
+ * @param contains value of text filter
+ * @param category chosen category
+ * @param projectType chosen project type
+ */
+{template .filter}
+
+    <h2>{if $projectType} {$projectType.formattedKey} - {/if}{$category.name}</h2>
+
+    <form id="project-filter" class="aui ajs-dirty-warning-exempt">
+        <div class="project-filter-item">
+            <input type="text" id="project-filter-text" placeholder="{getText('browse.projects.filtertext.placeholder')}" class="version-filter-text text" value="{$contains}" />
+            <span class="aui-icon aui-icon-small aui-iconfont-search-small"></span>
+        </div>
+    </form>
+{/template}
+
+/**
+ * Projects list.
+ */
+{template .projects}
+    <div class="p-list">
+        {call .table}
+        {/call}
+    </div>
+{/template}
+
+
+/**
+ * Projects table
+ */
+{template .table}
+    {call aui.table}
+        {param theadContent}
+            <tr>
+                <th></th>
+                <th class="project-list-name">{getText('common.concepts.project')}</th>
+                <th class="project-list-key">{getText('common.concepts.key')}</th>
+                <th class="project-list-type">{getText('common.concepts.project.type')}</th>
+                <th class="project-list-lead">{getText('common.concepts.projectlead')}</th>
+                <th class="project-list-category">{getText('admin.projects.project.category')}</th>
+                <th class="project-list-url">{getText('common.concepts.url')}</th>
+            </tr>
+        {/param}
+        {param contentIncludesTbody}true{/param}
+        {param content}
+            <tbody class="projects-list"></tbody>
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * Single project row.
+ *
+ * @param id project ID
+ * @param key project key
+ * @param hasDefaultAvatar does the project has default avatar
+ * @param name project name
+ * @param? lead name of the project lead
+ * @param? leadProfileLink prerendered link to project lead profile
+ * @param? url project URL
+ * @param? projectCategoryId project category ID
+ * @param? projectCategoryName project category name
+ * @param? projectTypeIcon project type icon
+ * @param? projectTypeName project type name
+ */
+{template .projectRow}
+    {let $avatarSize: 'small' /}
+    <tr>
+        <td class="cell-type-icon" data-cell-type="avatar">
+            {call aui.avatar.avatar}
+                {param isProject}true{/param}
+                {param size}{$avatarSize}{/param}
+                {param avatarImageUrl}
+                    {if ($hasDefaultAvatar)}
+                        {contextPath()}/secure/projectavatar?size={$avatarSize}
+                    {else}
+                        {contextPath()}/secure/projectavatar?size={$avatarSize}&pid={$id}
+                    {/if}
+                {/param}
+                {param extraClasses}jira-system-avatar{/param}
+            {/call}
+        </td>
+        <td data-cell-type="name" class="cell-type-name">
+            <a href="{contextPath()}/browse/{$key}">{$name}</a>
+        </td>
+        <td>
+            {$key}
+        </td>
+        {if $projectTypeIcon}
+            <td class="cell-type-project-type">
+                <img src="data:image/svg+xml;base64,{$projectTypeIcon}" class="project-type-icon" />
+                <span>{$projectTypeName}</span>
+            </td>
+        {/if}
+        <td class="cell-type-user">
+            {if $lead}
+                {$leadProfileLink|noAutoescape}
+            {else}
+                <i>{getText('browse.projects.no.lead')}</i>
+            {/if}
+        </td>
+        <td class="cell-type-category">
+            {if $projectCategoryId}
+                <a class="category" data-category-id="{$projectCategoryId}" href="{contextPath()}/secure/BrowseProjects.jspa?selectedCategory={$projectCategoryId}">{$projectCategoryName}</a>
+            {else}
+                <i>{getText('browse.projects.none')}</i>
+            {/if}
+        </td>
+        <td class="cell-type-url">
+            {if $url}
+                <a href="{$url}">{$url}</a>
+            {else}
+                <i>{getText('browse.projects.no.url')}</i>
+            {/if}
+        </td>
+    </tr>
+{/template}
+
+/**
+ * No projects row
+ */
+{template .emptyRow}
+    <tr class="projects-list__row-empty">
+        <td colspan="6">
+            <div class="jira-adbox jira-adbox-medium no-results no-project-results">
+                <h2>{getText('browse.projects.not.found')}</h2>
+                <p class="no-results-hint">{getText('browse.projects.not.found.hint')}</p>
+            </div>
+        </td>
+    </tr>
+{/template}
+
+
+/**
+ * No business projects
+ * @param isAdmin if the logged in user is admin
+ */
+{template .emptyRowForBusiness}
+    <tr class="projects-list__row-empty">
+        <td colspan="6">
+            <div class="no-business-project-results">
+                    <div class="create-business-project-image"></div>
+                    <h6>{getText('browse.projects.business.projects.not.created')}</h6>
+                    <p>{getText('browse.projects.business.projects.description')}</p>
+                    {if $isAdmin}
+                        <p><a href="#" class="add-project-trigger">{getText('browse.projects.business.projects.create.new.project.link')}</a></p>
+                    {/if}
+            </div>
+        </td>
+    </tr>
+{/template}
+
+/**
+ * Pagination
+ *
+ * @param currentPage
+ * @param firstPage
+ * @param lastPage
+ * @param totalPages
+ * @param url
+ * @param cssClass
+ */
+{template .pagination}
+    <ol data-total="{$totalPages}" class="aui-nav aui-nav-pagination{if $cssClass} {$cssClass}{/if}">
+        {if $firstPage < $lastPage}
+            <li class="aui-nav-previous">
+                <a href="{$url}&amp;page={if $currentPage == $firstPage}0{else}{$currentPage - 1}{/if}" {if $currentPage == $firstPage}aria-disabled="true"{else}data-page="{if $currentPage == $firstPage}0{else}{$currentPage - 1}{/if}"{/if}>
+                    {getText('common.words.previous')}
+                </a>
+            </li>
+            {for $page in range($firstPage, $lastPage + 1)}
+                {if $page == $currentPage}
+                    <li class="aui-nav-page aui-nav-selected">{$page}</li>
+                {else}
+                    <li><a href="{$url}&amp;page={$page}" data-page="{$page}">{$page}</a></li>
+                {/if}
+            {/for}
+            <li class="aui-nav-next">
+                <a href="{$url}&amp;page={if $currentPage == $lastPage}{$lastPage}{else}{$currentPage + 1}{/if}"{if $currentPage == $lastPage}aria-disabled="true"{else}data-page="{if $currentPage == $lastPage}{$lastPage}{else}{$currentPage + 1}{/if}"{/if}>
+                    {getText('common.words.next')}
+                </a>
+            </li>
+        {/if}
+    </ol>
+{/template}
+
+/**
+ * Error page
+ *
+ * @param errorMessages
+ */
+{template .error}
+    {call aui.page.document}
+        {param windowTitle}{getText('common.words.error')}{/param}
+        {param headContent}<meta name="decorator" content="message"/>{/param}
+        {param content}
+            <div class="form-body">
+                <header>
+                    <h1>{getText('common.words.error')}</h1>
+                </header>
+                {call aui.message.error}
+                    {param content}
+                        {foreach $error in $errorMessages}
+                            <p>{$error|noAutoescape}</p>
+                        {/foreach}
+                    {/param}
+                {/call}
+            </div>
+        {/param}
+    {/call}
+{/template}

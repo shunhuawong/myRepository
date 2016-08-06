@@ -1,0 +1,57 @@
+{namespace JIRA.Templates.errors.Misc}
+
+/**
+ * Some magic Javascript that attempts to recover from a server-side runtime error that occurs after the HTTP response
+ * has been committed. This implies that we've already transmitted HTTP headers to the client, that
+ * content-type=text/html, and that we may have transmitted part/all of the HTML load too.
+ *
+ * As we don't know where we're up to in the page we must first attempt to close any open quotes, script tags, etc.
+ * Then we pass an entire pre-rendered error page as an html attribute, and attempt to replace the current page
+ * contents with it (ie. performing a client-side redraw.)
+ *
+ * @param contextPath request.getContextPath()
+ * @param errorPageHtml The pre-rendered error page HTML that we want to replace the current page contents with.
+ */
+{template .committedResponseHtmlErrorRecovery}
+    {literal}
+        '"-->>]]></script></noscript></style> ERROR OCCURRED
+    {/literal}
+    <script src="{$contextPath}/static-assets/jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" id="wrapper" data-html="{$errorPageHtml}">
+    {literal}
+        var errorPageHtml = document.getElementById("wrapper").getAttribute("data-html");
+
+        function parseToIframe(html, sandbox) {
+            sandbox = sandbox || "";
+            var iFrame = document.createElement("iframe");
+            iFrame.setAttribute("sandbox", "allow-same-origin " + sandbox);
+            document.body.appendChild(iFrame);
+            iFrame.contentDocument.open();
+            iFrame.contentDocument.write(html);
+            iFrame.contentDocument.close();
+            return iFrame;
+        }
+
+        $.fn.getAttributes = function() {
+            var attributes = {};
+
+            if( this.length ) {
+                $.each( this[0].attributes, function( index, attr ) {
+                    attributes[ attr.name ] = attr.value;
+                } );
+            }
+
+            return attributes;
+        };
+
+        // Chrome, Safari, FF, IE9, IE10 (doesn't run inline script)
+        var iFrame = parseToIframe(errorPageHtml);
+        var newHead = jQuery("head", iFrame.contentDocument.documentElement);
+        var newBody = jQuery("body", iFrame.contentDocument.documentElement);
+        jQuery("body", document.documentElement).attr(newBody.getAttributes()).html(newBody.html());
+        jQuery("head", document.documentElement).html(newHead.getAttributes()).html(newHead.html());
+    {/literal}
+    </script>
+{/template}
+
+

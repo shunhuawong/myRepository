@@ -1,0 +1,6 @@
+#enable_html_escaping()
+#searcherHeader ($customField)
+#if ($valueObject)
+    $valueObject.name
+#end
+#searcherFooter ($customField)

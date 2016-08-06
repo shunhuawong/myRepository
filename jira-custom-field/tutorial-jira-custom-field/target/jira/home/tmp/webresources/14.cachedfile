@@ -1,0 +1,4650 @@
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-form-drop-zone', location = 'js/dropzones/FormDropZone.js' */
+define('dndattachment/dropzones/FormDropZone',
+    ['dndattachment/Parser',
+    'dndattachment/dropzones/IssueDropZone',
+    'jquery',
+    'dndattachment/aui',
+    'dndattachment/i18n',
+    'dndattachment/JIRA',
+    'dndattachment/util/DataTransfer',
+    'dndattachment/ctrlv/utility',
+    'jira/util/events'],
+
+    function(Parser,
+             IssueDropZone,
+             $,
+             AJS,
+             I18n,
+             JIRA,
+             DataTransfer,
+             Utility,
+             Events) {
+
+        var FormDropZone = IssueDropZone.extend({
+
+            eventGroup: 'formdropzone',
+
+            init: function() {
+                this._super.apply(this, arguments);
+                this.progressBars = [];
+
+                this.bind('uploadFinished', this.onUploadFinished.bind(this));
+
+                this.$containerNode = this.getContainerNode();
+                this.$formNode = this.$node.parents('form');
+                this.formToken = this.$formNode.find('input[name="formToken"]').attr('value');
+
+                // this is required by JIRA.applyErrorsToForm
+                this.$inputNode = $('<input name="dnd-dropzone" type="hidden" />').insertAfter(this.$node);
+
+                this.$fieldNode = this.$node.parents('.field-group');
+                this.$fieldNode.addClass('long-field');
+
+                this.connectContainer();
+            },
+
+            onUploadFinished: function(event, progressBar) {
+                var $checkbox = $('<input type="checkbox" name="filetoconvert"/>')
+                    .addClass("upload-progress-bar__checkbox")
+                    .attr("value", progressBar.fileID)
+                    .attr("id", "filetoconvert" + "-" + progressBar.fileID)
+                    .prop("checked", true)
+                    .insertBefore(progressBar.$node);
+
+                progressBar.bind('onBeforeDestroy', function() {
+                    $checkbox.prop("checked", false).prop("value", null);
+                });
+
+                setTimeout(function() {
+                    progressBar.$node.addClass('upload-progress-bar__upload-ready');
+                    progressBar.setIcon('aui-iconfont-close-dialog');
+                }, 1000);
+
+                JIRA.trace('jira.issue.dnd.uploadfinished');
+            },
+
+            commitUpload: function(fileIDs) {
+                this.queueEvent('commitUpload', { count: fileIDs.length });
+                // there is no auto commit in AttachFiles dialog
+                // also it means that progress bars won't get destroyed
+                return new $.Deferred();
+            },
+
+            getContainerNode: function() {
+                return this.$node.parents('.jira-dialog-content');
+            },
+
+            connectContainer: function() {
+                this.$dragoverMask = $('<div class="attach-files-drop-zone__dragover-mask" />');
+                this.$dragoverMask.appendTo(this.$containerNode);
+                this.$body = $(document.body);
+
+                this.onDragOverDropHandler = this.onDragOverDrop.bind(this);
+                this.onDragLeaveHandler = this.onDragLeave.bind(this);
+                this.onBodyDragOverDropHandler = this.onBodyDragOverDrop.bind(this);
+                this.$containerNode.on('dragover drop', this.onDragOverDropHandler);
+                this.$containerNode.on('dragleave', this.onDragLeaveHandler);
+                this.$body.on('dragover drop', this.onBodyDragOverDropHandler);
+
+                // store handler so it can be removed(only this one)
+                this.onBeforeSubmitHandler = this.onBeforeSubmit.bind(this);
+                this.$formNode.on('before-submit', this.onBeforeSubmitHandler);
+
+                this.onContentAddedHandler = this.onContentAdded.bind(this);
+                JIRA.bind(JIRA.Events.NEW_CONTENT_ADDED, this.onContentAddedHandler);
+                Events.bind("Dialog.hide", this.onDialogHide.bind(this));
+                if (AJS.dialog2) {
+                    AJS.dialog2.on("hide", this.onDialogHide.bind(this));
+                }
+            },
+
+            disconnectContainer: function() {
+                this.$dragoverMask.remove();
+                this.$containerNode.removeClass('attach-files-drop-zone__dragover');
+
+                this.$containerNode.off('dragover drop', this.onDragOverDropHandler);
+                this.$containerNode.off('dragleave', this.onDragLeaveHandler);
+
+                this.$formNode.off('before-submit', this.onBeforeSubmitHandler);
+                JIRA.unbind(JIRA.Events.NEW_CONTENT_ADDED, this.onContentAddedHandler);
+                Events.unbind("Dialog.hide", this.onDialogHide.bind(this));
+                if (AJS.dialog2) {
+                    AJS.dialog2.off("hide", this.onDialogHide.bind(this));
+                }
+            },
+
+            isAttached: function() {
+                return $.contains(document, this.$node[0]);
+            },
+
+            onContentAdded: function() {
+                if(!this.isAttached()) {
+                    this.disconnectContainer();
+                }
+            },
+
+            onDialogHide: function () {
+                this.$body.off('dragover drop', this.onBodyDragOverDropHandler);
+            },
+
+            onBodyDragOverDrop: function (event) {
+                event.preventDefault();
+                if (event.originalEvent) {
+                    event.originalEvent.dataTransfer.dropEffect = "none";
+                }
+            },
+
+            onDragOverDrop: function(event) {
+                if (!this.isAttached()) {
+                    this.disconnectContainer();
+                    return;
+                }
+                if (!Utility.dragEventContainsFiles(event)) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.originalEvent) {
+                    event.originalEvent.dataTransfer.dropEffect = "copy";
+                }
+                this.$containerNode.addClass('attach-files-drop-zone__dragover');
+
+                if(event.type == 'drop') {
+                    this.$containerNode.removeClass('attach-files-drop-zone__dragover');
+                    $(document).trigger("dropHandled");
+
+                    var dataTransfer = new DataTransfer(event.dataTransfer);
+                    dataTransfer.getFiles().then(function(files) {
+                        this.handleFilesReceived(files);
+                        this.queueEvent('fileDrop', { count: files.length });
+                    }.bind(this));
+                }
+            },
+
+            onDragLeave: function() {
+                this.$containerNode.removeClass('attach-files-drop-zone__dragover');
+            },
+
+            onBeforeSubmit: function(event) {
+                if(this.isDirty) {
+                    event.preventDefault();
+                    var errors = {};
+                    errors[this.$inputNode.attr("name")] = I18n("dnd.attachment.upload.in.progress");
+
+                    JIRA.applyErrorsToForm(this.$formNode, errors);
+                    this.$formNode.find('.error').toArray().some(function(el) {
+                        el.scrollIntoView()
+                    });
+                }
+            },
+
+            markDirty: function(isDirty) {
+                IssueDropZone.prototype.markDirty.apply(this, arguments);
+
+                this.isDirty = isDirty;
+
+                JIRA.trace(isDirty ? 'jira.issue.dnd.isdirty' : 'jira.issue.dnd.isclear');
+            },
+
+            /**
+             * We want to keep track of all the progress bars in our drop zone
+             */
+            handleNewProgressBar: function(progressBar) {
+                this.progressBars.push(progressBar);
+
+                // Remove from our list of progress bars if it's destroyed
+                progressBar.bind('onBeforeDestroy', _.bind(function() {
+                    this.trigger("progressBarOnBeforeDestroy", progressBar);
+                    this.progressBars = _.filter(this.progressBars, function(bar) {
+                        return bar !== progressBar;
+                    });
+                    if (this.progressBars.length === 0) {
+                        this.trigger("allUploadsCancelled");
+                    }
+                }, this));
+
+                progressBar.bind('onDestroy', _.bind(function() {
+                    this.trigger('progressBarDestroyed');
+                }, this));
+
+                progressBar.bind('onFinished', _.bind(function() {
+                    this.trigger("progressBarFinished");
+                }, this));
+                progressBar.bind('onFailed', _.bind(function() {
+                    this.trigger("progressBarFailed");
+                }, this));
+                this.trigger("progressBarStarted");
+            },
+
+            /**
+             * Returns true if any files are still uploading
+             */
+            filesStillUploading: function() {
+                return _.filter(this.progressBars, function (bar) {
+                        return !bar.isFinished();
+                    }).length > 0;
+            },
+
+            /**
+             * Returns true if any files failed to upload
+             */
+            anyFilesFailed: function() {
+                return _.filter(this.progressBars, function(bar) {
+                        return bar.isFailed();
+                    }).length > 0;
+            }
+        });
+
+        return FormDropZone;
+    });;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form-templates', location = 'soy/quickform.soy' */
+// This file was automatically generated from quickform.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace JIRA.Templates.QuickForm.
+ */
+
+if (typeof JIRA == 'undefined') { var JIRA = {}; }
+if (typeof JIRA.Templates == 'undefined') { JIRA.Templates = {}; }
+if (typeof JIRA.Templates.QuickForm == 'undefined') { JIRA.Templates.QuickForm = {}; }
+
+
+JIRA.Templates.QuickForm.field = function(opt_data, opt_ignored) {
+  return '' + soy.$$filterNoAutoescape(opt_data.editHtml);
+};
+if (goog.DEBUG) {
+  JIRA.Templates.QuickForm.field.soyTemplateName = 'JIRA.Templates.QuickForm.field';
+}
+
+
+JIRA.Templates.QuickForm.fieldPicker = function(opt_data, opt_ignored) {
+  return '<div class="qf-picker"><div class="qf-picker-header"><dl><dt>' + soy.$$escapeHtml("Show Fields:") + '</dt>' + ((opt_data.isConfigurable) ? '<dd><a class="qf-unconfigurable" href="#">' + soy.$$escapeHtml("All") + '</a></dd><dd>' + soy.$$escapeHtml("Custom") + '</dd>' : '<dd>' + soy.$$escapeHtml("All") + '</dd><dd><a class="qf-configurable" href="#">' + soy.$$escapeHtml("Custom") + '</a></dd>') + '</dl></div><div class="qf-picker-content ' + ((! opt_data.isConfigurable) ? 'qf-picker-unconfigurable' : '') + '"></div><div class="qf-picker-footer"></div></div>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.QuickForm.fieldPicker.soyTemplateName = 'JIRA.Templates.QuickForm.fieldPicker';
+}
+
+
+JIRA.Templates.QuickForm.configurablePickerButton = function(opt_data, opt_ignored) {
+  return '<a title="' + soy.$$escapeHtml(opt_data.label) + '" data-field-id="' + soy.$$escapeHtml(opt_data.fieldId) + '" class="qf-picker-button' + ((opt_data.isActive) ? ' qf-active' : '') + '" href="#">' + soy.$$escapeHtml(opt_data.label) + ((opt_data.required) ? '<span class="aui-icon icon-required"></span>' : '') + '</a>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.QuickForm.configurablePickerButton.soyTemplateName = 'JIRA.Templates.QuickForm.configurablePickerButton';
+}
+
+
+JIRA.Templates.QuickForm.unconfigurablePickerButton = function(opt_data, opt_ignored) {
+  return '<span title="' + soy.$$escapeHtml(opt_data.label) + '" data-field-id="' + soy.$$escapeHtml(opt_data.fieldId) + '" class="qf-picker-button' + ((opt_data.isActive) ? ' qf-active' : '') + '" href="#">' + soy.$$escapeHtml(opt_data.label) + ((opt_data.required) ? '<span class="aui-icon icon-required"></span>' : '') + '</span>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.QuickForm.unconfigurablePickerButton.soyTemplateName = 'JIRA.Templates.QuickForm.unconfigurablePickerButton';
+}
+
+
+JIRA.Templates.QuickForm.errorMessage = function(opt_data, opt_ignored) {
+  return '' + aui.message.error({closeable: 'true', content: opt_data.message});
+};
+if (goog.DEBUG) {
+  JIRA.Templates.QuickForm.errorMessage.soyTemplateName = 'JIRA.Templates.QuickForm.errorMessage';
+}
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form-templates', location = 'soy/issue.soy' */
+// This file was automatically generated from issue.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace JIRA.Templates.Issue.
+ */
+
+if (typeof JIRA == 'undefined') { var JIRA = {}; }
+if (typeof JIRA.Templates == 'undefined') { JIRA.Templates = {}; }
+if (typeof JIRA.Templates.Issue == 'undefined') { JIRA.Templates.Issue = {}; }
+
+
+JIRA.Templates.Issue.editIssueError = function(opt_data, opt_ignored) {
+  return '<h2>' + soy.$$escapeHtml("Edit Issue") + '</h2><div class="form-body">' + soy.$$filterNoAutoescape(opt_data.errorHtml) + '</div>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.editIssueError.soyTemplateName = 'JIRA.Templates.Issue.editIssueError';
+}
+
+
+JIRA.Templates.Issue.editIssueForm = function(opt_data, opt_ignored) {
+  return '<form action="#" name="jiraform" class="aui"><h2>' + ((opt_data.showFieldConfigurationToolBar) ? JIRA.Templates.Issue.fieldConfigurationToolbar(null) : '') + soy.$$filterNoAutoescape(opt_data.title) + '</h2><div class="form-body"><input type="hidden" name="id" value="' + soy.$$escapeHtml(opt_data.issueId) + '" /><input type="hidden" name="atl_token" value="' + soy.$$escapeHtml(opt_data.atlToken) + '" /><input type="hidden" name="formToken" value="' + soy.$$escapeHtml(opt_data.formToken) + '" /><div class="content">' + ((opt_data.fieldsHtml) ? soy.$$filterNoAutoescape(opt_data.fieldsHtml) : '') + ((opt_data.commentField) ? soy.$$filterNoAutoescape(opt_data.commentField.editHtml) : '') + '<!-- fields inserted here via javascript --></div></div><div class="buttons-container form-footer"><div class="buttons"><input accesskey="' + soy.$$escapeHtml("s") + '" title="' + soy.$$escapeHtml(AJS.format("Press {1}+{0} to submit this form","s",opt_data.modifierKey)) + '" class="button" id="edit-issue-submit" name="Edit" type="submit" value="' + soy.$$escapeHtml("Update") + '" /><a href="#" accesskey="' + soy.$$escapeHtml("`") + '" title="' + soy.$$escapeHtml(AJS.format("Press {1}+{0} to cancel","`",opt_data.modifierKey)) + '" class="cancel">' + soy.$$escapeHtml("Cancel") + '</a></div></div></form>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.editIssueForm.soyTemplateName = 'JIRA.Templates.Issue.editIssueForm';
+}
+
+
+JIRA.Templates.Issue.fieldConfigurationToolbar = function(opt_data, opt_ignored) {
+  return '' + aui.toolbar2.toolbar2({extraClasses: 'qf-form-operations', content: '' + aui.toolbar2.item({item: 'secondary', content: '' + aui.buttons.button({text: ' ' + soy.$$escapeHtml("Configure Fields"), id: 'qf-field-picker-trigger', extraClasses: 'toolbar-trigger', iconText: "Configure Fields", iconType: 'aui', iconClass: 'aui-icon-small aui-iconfont-configure'})})});
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.fieldConfigurationToolbar.soyTemplateName = 'JIRA.Templates.Issue.fieldConfigurationToolbar';
+}
+
+
+JIRA.Templates.Issue.issueFields = function(opt_data, opt_ignored) {
+  var output = '';
+  if (opt_data.hasTabs) {
+    output += '<div class="aui-tabs horizontal-tabs" id="horizontal"><ul class="tabs-menu">';
+    var tabList64 = opt_data.tabs;
+    var tabListLen64 = tabList64.length;
+    for (var tabIndex64 = 0; tabIndex64 < tabListLen64; tabIndex64++) {
+      var tabData64 = tabList64[tabIndex64];
+      output += (tabData64) ? '<li class="menu-item ' + ((tabData64.isFirst) ? 'first active-tab' : '') + ' "><a href="#tab-' + soy.$$escapeHtml(tabData64.position) + '" ><strong>' + soy.$$escapeHtml(tabData64.label) + '</strong></a></li>' : '';
+    }
+    output += '</ul>';
+    var tabList78 = opt_data.tabs;
+    var tabListLen78 = tabList78.length;
+    for (var tabIndex78 = 0; tabIndex78 < tabListLen78; tabIndex78++) {
+      var tabData78 = tabList78[tabIndex78];
+      if (tabData78) {
+        output += '<div class="tabs-pane ' + ((tabData78.isFirst) ? 'active-pane' : '') + '" id="tab-' + soy.$$escapeHtml(tabData78.position) + '">';
+        var fieldList88 = tabData78.fields;
+        var fieldListLen88 = fieldList88.length;
+        for (var fieldIndex88 = 0; fieldIndex88 < fieldListLen88; fieldIndex88++) {
+          var fieldData88 = fieldList88[fieldIndex88];
+          output += (fieldData88.editHtml) ? soy.$$filterNoAutoescape(fieldData88.editHtml) : '';
+        }
+        output += '</div>';
+      }
+    }
+    output += '</div>';
+  } else {
+    var fieldList98 = opt_data.fields;
+    var fieldListLen98 = fieldList98.length;
+    for (var fieldIndex98 = 0; fieldIndex98 < fieldListLen98; fieldIndex98++) {
+      var fieldData98 = fieldList98[fieldIndex98];
+      output += (fieldData98.editHtml) ? soy.$$filterNoAutoescape(fieldData98.editHtml) : '';
+    }
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.issueFields.soyTemplateName = 'JIRA.Templates.Issue.issueFields';
+}
+
+
+JIRA.Templates.Issue.createIssueForm = function(opt_data, opt_ignored) {
+  var output = '<form name="jiraform" action="#" class="aui"><h2>' + ((opt_data.showFieldConfigurationToolBar) ? JIRA.Templates.Issue.fieldConfigurationToolbar(null) : '') + soy.$$escapeHtml(opt_data.title) + '</h2><div class="form-body">';
+  if (opt_data.issueSetupFields) {
+    output += '<div class="issue-setup-fields">';
+    var fieldList114 = opt_data.issueSetupFields;
+    var fieldListLen114 = fieldList114.length;
+    for (var fieldIndex114 = 0; fieldIndex114 < fieldListLen114; fieldIndex114++) {
+      var fieldData114 = fieldList114[fieldIndex114];
+      output += '<div class="qf-field qf-field-' + soy.$$escapeHtml(fieldData114.id) + ' qf-required" data-field-id="' + soy.$$escapeHtml(fieldData114.id) + '">' + soy.$$filterNoAutoescape(fieldData114.editHtml) + '</div>';
+    }
+    output += '</div>';
+  }
+  output += ((opt_data.parentIssueId) ? '<input type="hidden" name="parentIssueId" value="' + soy.$$escapeHtml(opt_data.parentIssueId) + '" />' : '') + '<input type="hidden" name="atl_token" value="' + soy.$$escapeHtml(opt_data.atlToken) + '" /><input type="hidden" name="formToken" value="' + soy.$$escapeHtml(opt_data.formToken) + '" /><div class="content">' + ((opt_data.fieldsHtml) ? soy.$$filterNoAutoescape(opt_data.fieldsHtml) : '') + '<!-- fields inserted here via javascript --></div></div><div class="buttons-container form-footer"><div class="buttons">' + ((! opt_data.disallowCreateAnother) ? '<label for="qf-create-another" class="qf-create-another"><input id="qf-create-another" type="checkbox" ' + ((opt_data.multipleMode) ? 'checked="checked"' : '') + ' />' + soy.$$escapeHtml("Create another") + '</label>' : '') + '<input accesskey="' + soy.$$escapeHtml("s") + '" title="' + soy.$$escapeHtml(AJS.format("Press {1}+{0} to submit this form","s",opt_data.modifierKey)) + '" class="aui-button aui-button-primary" id="create-issue-submit" name="Edit" type="submit" value="' + soy.$$escapeHtml("Create") + '" /><a href="#" accesskey="' + soy.$$escapeHtml("`") + '" title="' + soy.$$escapeHtml(AJS.format("Press {1}+{0} to cancel","`",opt_data.modifierKey)) + '" class="cancel">' + soy.$$escapeHtml("Cancel") + '</a></div></div></form>';
+  return output;
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.createIssueForm.soyTemplateName = 'JIRA.Templates.Issue.createIssueForm';
+}
+
+
+JIRA.Templates.Issue.createIssueError = function(opt_data, opt_ignored) {
+  return '<h2>' + soy.$$escapeHtml("Create Issue") + '</h2><div class="form-footer">' + soy.$$filterNoAutoescape(opt_data.errorHtml) + '</div>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.createIssueError.soyTemplateName = 'JIRA.Templates.Issue.createIssueError';
+}
+
+
+JIRA.Templates.Issue.undealtErrors = function(opt_data, opt_ignored) {
+  var output = '<div>' + soy.$$escapeHtml("There were some errors when trying to create this issue") + '</div><ul>';
+  var errorList173 = opt_data.errors;
+  var errorListLen173 = errorList173.length;
+  for (var errorIndex173 = 0; errorIndex173 < errorListLen173; errorIndex173++) {
+    var errorData173 = errorList173[errorIndex173];
+    output += '<li>' + soy.$$escapeHtml(errorData173) + '</li>';
+  }
+  output += '</ul>';
+  return output;
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Issue.undealtErrors.soyTemplateName = 'JIRA.Templates.Issue.undealtErrors';
+}
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/templates/form.js' */
+define('quick-edit/templates/form', function(){
+    return JIRA.Templates.QuickForm;
+});;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/templates/issue.js' */
+define('quick-edit/templates/issue', function(){
+    return JIRA.Templates.Issue;
+});;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/util/extension-mixin.js' */
+/**
+ * @module quick-edit/util/extension-mixin
+ */
+define('quick-edit/util/extension-mixin', [
+    'jquery'
+], function(
+    jQuery
+){
+    'use strict';
+
+    /**
+     * Triggers event on an instance
+     *
+     * @param {String} evtName - Event Name
+     * @param {Array} args - Args to pass to event handlers
+     */
+    var triggerEvent = function (evtName, args, global) {
+        jQuery(this).trigger(evtName, args);
+
+        if (global && this.globalEventNamespaces) {
+            jQuery.each(this.globalEventNamespaces, function (i, glbEvtName) {
+                jQuery(document).trigger(glbEvtName + "." + evtName, args);
+            });
+        }
+        return this;
+    };
+
+    return {
+        triggerEvent: triggerEvent
+    };
+});;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/util/class.js' */
+/**
+ * @module quick-edit/util/class
+ */
+define('quick-edit/util/class', [
+    'quick-edit/util/extension-mixin',
+    'jira/lib/class'
+], function(
+    extensionMixin,
+    Class
+){
+    /**
+     * @class Class
+     */
+    return Class.extend(extensionMixin);
+});
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/util/control.js' */
+/**
+ * @module quick-edit/util/control
+ */
+define('quick-edit/util/control', [
+    'quick-edit/util/extension-mixin',
+    'jira/ajs/control'
+], function(
+    extensionMixin,
+    Control
+){
+    /**
+     * @class Control
+     */
+    return Control.extend(extensionMixin);
+});
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/util/dialog.js' */
+/**
+ * @module quick-edit/util/dialog
+ */
+define('quick-edit/util/dialog', [
+    'jira/dialog/dialog',
+    'jira/issue',
+    'jira/issuenavigator/issue-navigator'
+], function(
+    Dialog,
+    Issue,
+    IssueNavigator
+){
+    'use strict';
+
+    var IssuesAPI = JIRA.Issues;
+
+    /**
+     * Gets a specific attribute from the trigger that opened the current dialog
+     */
+    var getAttrFromActiveTrigger = function (attr) {
+        var currentDialog = Dialog.current,
+            $activeTrigger = currentDialog.$activeTrigger;
+
+        if ($activeTrigger) {
+            return $activeTrigger.attr(attr);
+        }
+    };
+
+    var getActionIssueKey = function () {
+        var issueKey = getAttrFromActiveTrigger("data-issueKey");
+
+        if (!issueKey && Issue.getIssueKey()) {
+            issueKey = Issue.getIssueKey();
+        }
+        if (!issueKey && IssueNavigator.getSelectedIssueKey()) {
+            issueKey = IssueNavigator.getSelectedIssueKey();
+        }
+        if (!issueKey && IssuesAPI) {
+            // kickass
+            issueKey = IssuesAPI.Api.getSelectedIssueKey();
+        }
+        return issueKey;
+    };
+
+    /**
+     * Builds a title for an issue dialog based on if there is a data-issuekey specified on the link or it is launched
+     * from the issue navigator. If there is no issue key, it just returns the action.
+     *
+     * @param {String} action - Prefix to title e.g Edit Issue
+     * @return {String}
+     */
+    var getIssueActionTitle = function (action) {
+        var issueKey = getActionIssueKey();
+
+        if (!issueKey) {
+            return action
+        }
+
+        return action + " : " + issueKey;
+    };
+
+    /**
+     * Returns true if a Dialog's title should contain the Issue Key.
+     * @return Boolean
+     */
+    var shouldShowIssueKeyInTitle = function() {
+        return IssuesAPI || IssueNavigator.isNavigator() || getAttrFromActiveTrigger("data-issueKey");
+    };
+
+    return {
+        getActionIssueKey: getActionIssueKey,
+        getAttrFromActiveTrigger: getAttrFromActiveTrigger,
+        getIssueActionTitle: getIssueActionTitle,
+        shouldShowIssueKeyInTitle: shouldShowIssueKeyInTitle
+    };
+});
+
+/**
+ * @deprecated JIRA.Dialog.getActionIssueKey
+ */
+AJS.namespace('JIRA.Dialog.getActionIssueKey', null, require('quick-edit/util/dialog').getActionIssueKey);
+
+/**
+ * @deprecated JIRA.Dialog.getAttrFromActiveTrigger
+ */
+AJS.namespace('JIRA.Dialog.getAttrFromActiveTrigger', null, require('quick-edit/util/dialog').getAttrFromActiveTrigger);
+
+/**
+ * @deprecated JIRA.Dialog.getIssueActionTitle
+ */
+AJS.namespace('JIRA.Dialog.getIssueActionTitle', null, require('quick-edit/util/dialog').getIssueActionTitle);
+
+/**
+ * @deprecated JIRA.Dialog.shouldShowIssueKeyInTitle
+ */
+AJS.namespace('JIRA.Dialog.shouldShowIssueKeyInTitle', null, require('quick-edit/util/dialog').shouldShowIssueKeyInTitle);;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/util/jira.js' */
+/**
+ * @module quick-edit/util/jira
+ */
+define('quick-edit/util/jira', [
+    'quick-edit/templates/issue',
+    'jira/util/data/meta',
+    'aui/message',
+    'jquery'
+], function(
+    IssueTemplates,
+    Meta,
+    AuiMessage,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * If the child element is within an aui tab, will make that tab active
+     * @param {jQuery} child
+     */
+    var activateTabWithChild = function (child) {
+        var tabId,
+            $tabContainer,
+            $tabTrigger,
+            $tab = child.closest(".tabs-pane");
+
+        if ($tab.length) {
+            $tabContainer = $tab.closest(".aui-tabs");
+            tabId = $tab.attr("id");
+            $tabTrigger = $tabContainer.find("a[href='#" + tabId + "']");
+            $tabTrigger.click();
+        }
+    };
+
+    /**
+     * Adds an error message to the form
+     *
+     * @param {jQuery} form
+     * @param {String} error
+     */
+    var applyErrorMessageToForm = function (form, error) {
+        return applyMessageToForm("error", form, AJS.escapeHtml(error), false);
+    };
+
+    /**
+     * Adds an error message to the form without escaping html
+     *
+     * @param {jQuery} form
+     * @param {String} error
+     */
+    var applyErrorMessageWithHTMLToForm = function (form, error) {
+        return applyMessageToForm("error", form, error, false);
+    };
+
+    /**
+     * Appends inline errors to form, focusing the first field with error
+     *
+     * @param {jQuery} form
+     * @param {Object<fieldName>:<errorMessage>} errors
+     */
+    var applyErrorsToForm = function (form, errors) {
+        var $focusField,
+            undealtErrors = [];
+
+        jQuery.each(errors, function (name, message) {
+            var $group,
+                $error,
+                $field = form.find(":input[name='" + name + "']").last();
+
+            if ($field.length === 1) {
+                if (!$focusField) {
+                    $focusField = $field; // store first field with error so we can focus it at the end
+                }
+                $error = jQuery("<div class='error' />").attr("data-field", name).text(message);
+                $group = $field.closest(".field-group, .group");
+                $group.find(".error").remove(); // remove any pre-existing errors
+                $group.append($error);
+            } else if ($field.length === 0) {
+                undealtErrors.push(message);
+            }
+        });
+
+        if (undealtErrors.length > 0) {
+            applyErrorMessageWithHTMLToForm(form, IssueTemplates.undealtErrors({errors: undealtErrors}));
+        }
+
+        activateTabWithChild(form.find(".error:first"));
+
+        if ($focusField) {
+            $focusField.focus();
+        }
+    };
+
+    /**
+     * Prepends error message (aui style) to form body
+     *
+     * @param {jQuery} form
+     * @param {String} error
+     */
+    var applyMessageToForm = function (type, form, message, dismissable) {
+        var $errorCtx = form.find(".aui-message-context");
+
+        if (!$errorCtx.length) {
+            $errorCtx = jQuery("<div class='aui-message-context' />");
+            $errorCtx.prependTo(form.find(".form-body"));
+        }
+
+        $errorCtx.empty();
+
+        AuiMessage[type]($errorCtx, {
+            shadowed: false,
+            closeable: dismissable,
+            body: message
+        });
+    };
+
+    /**
+     * Adds a success message to the form
+     * @param {jQuery} form
+     * @param {String} message
+     */
+    var applySuccessMessageToForm = function (form, message) {
+        return applyMessageToForm("success", form, message, true);
+    };
+
+    /**
+     * Extracts script tags from html fragments.
+     *
+     * jQuery will remove any script tags in the supplied html and
+     * append them separately to the result (var $html). It does this to
+     * allow ajax responses to contain script elements which are evaluated
+     * when appended.
+     *
+     * Since we want to run the scripts in our own time we'll strip them
+     * out and return them in their own object.
+     *
+     * @param html
+     */
+    var extractScripts = function (html) {
+        var $html = jQuery(html);
+
+        return {
+            html: $html.not("script"),
+            scripts: $html.filter("script")
+        }
+    };
+
+    /**
+     * Wraps a property as a function if it is not already one
+     *
+     * @param property
+     * @return function
+     */
+    var makePropertyFunc = function (property) {
+        if (jQuery.isFunction(property)) {
+            return property;
+        } else {
+            return function () {
+                return property;
+            }
+        }
+    };
+
+    var getModifierKey = function () {
+        Meta.get("keyboard-accesskey-modifier");
+    };
+
+    return {
+        activateTabWithChild: activateTabWithChild,
+        applyErrorMessageToForm: applyErrorMessageToForm,
+        applyErrorsToForm: applyErrorsToForm,
+        applyMessageToForm: applyMessageToForm,
+        applySuccessMessageToForm: applySuccessMessageToForm,
+        getModifierKey: getModifierKey,
+        extractScripts: extractScripts,
+        makePropertyFunc: makePropertyFunc
+    };
+});
+
+/**
+ * @deprecated JIRA.activateTabWithChild
+ */
+AJS.namespace('JIRA.activateTabWithChild', null, require('quick-edit/util/jira').activateTabWithChild);
+
+/**
+ * @deprecated JIRA.applyErrorMessageToForm
+ */
+AJS.namespace('JIRA.applyErrorMessageToForm', null, require('quick-edit/util/jira').applyErrorMessageToForm);
+
+/**
+ * @deprecated JIRA.applyErrorsToForm
+ */
+AJS.namespace('JIRA.applyErrorsToForm', null, require('quick-edit/util/jira').applyErrorsToForm);
+
+/**
+ * @deprecated JIRA.applyMessageToForm
+ */
+AJS.namespace('JIRA.applyMessageToForm', null, require('quick-edit/util/jira').applyMessageToForm);
+
+/**
+ * @deprecated JIRA.applySuccessMessageToFor
+ */
+AJS.namespace('JIRA.applySuccessMessageToForm', null, require('quick-edit/util/jira').applySuccessMessageToForm);
+
+/**
+ * @deprecated JIRA.extractScripts
+ */
+AJS.namespace('JIRA.extractScripts', null, require('quick-edit/util/jira').extractScripts);
+
+/**
+ * @deprecated JIRA.makePropertyFunc
+ */
+AJS.namespace('JIRA.makePropertyFunc', null, require('quick-edit/util/jira').makePropertyFunc);
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/field/configurable.js' */
+/**
+ * @module quick-edit/form/field/configurable
+ */
+define('quick-edit/form/field/configurable', [
+    'quick-edit/util/jira',
+    'quick-edit/util/control',
+    'quick-edit/templates/form',
+    'jira/util/events',
+    'jira/util/events/types',
+    'jquery'
+], function(
+    JiraUtil,
+    Control,
+    FormTemplates,
+    Events,
+    EventTypes,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View class for field inputs that can be added and removed to forms.
+     *
+     * @class ConfigurableField
+     * @extends Control
+     */
+    return Control.extend({
+        /**
+         * @constructor
+         * @param descriptor
+         * ... {String} id
+         * ... {Boolean} required
+         * ... {String} label
+         * ... {String} editHtml
+         */
+        init: function (descriptor) {
+            this.descriptor = descriptor;
+            this.$element = jQuery("<div />").attr("id", "qf-field-" + this.getId());
+        },
+
+        /**
+         * Focuses input field
+         */
+        focus: function () {
+            this.$element.find(":input:first").focus();
+        },
+
+        highlight: function () {
+            var instance = this;
+
+            this.$element.css("backgroundColor", '#fff').animate({
+                backgroundColor: "lightyellow"
+            }, function () {
+                instance.$element.animate({
+                    backgroundColor: "#fff"
+                }, function () {
+                    instance.$element.css("backgroundColor", "");
+                });
+            });
+        },
+
+        /**
+         * Gets field label
+         * @return {String}
+         */
+        getLabel: function () {
+            return this.descriptor.label;
+        },
+
+        /**
+         * Gets field id
+         * @return {String}
+         */
+        getId: function () {
+            return this.descriptor.id;
+        },
+
+        /**
+         * Activates field by showing it
+         * @param {Boolean} silent - Fire event or not
+         */
+        activate: function (silent) {
+            var result;
+
+            this.active = true;
+            this.$element.addClass("qf-field-active").show();
+            this.$element.find("textarea").trigger("refreshInputHeight"); // So textarea expand to correct height. See expandOnInput.
+
+            if (!silent) {
+                result = this.render(); // reset value
+                this.$element.append(result.scripts);
+                this.focus();
+                Events.trigger(EventTypes.NEW_CONTENT_ADDED, [this.$element]);
+                this.$element.scrollIntoView();
+                this.triggerEvent("activated");
+            }
+        },
+
+        hasVisibilityFeature: function () {
+            return !!this.descriptor.hasVisibilityFeature;
+        },
+
+        /**
+         *
+         *
+         * @return {Boolean}
+         */
+        hasRetainFeature: function () {
+            return !!this.descriptor.hasRetainFeature;
+        },
+
+        /**
+         * Is the field shown
+         *
+         * @return {Boolean}
+         */
+        isActive: function () {
+            return this.active;
+        },
+
+        /**
+         * Disables field by hiding it
+         * @param {Boolean} silent - Fire event or not
+         */
+        disable: function (silent) {
+            this.render(); // reset value
+
+            this.active = false;
+            this.$element.removeClass("qf-field-active").hide();
+
+            if (!silent) {
+                this.triggerEvent("disabled");
+            }
+        },
+
+        /**
+         * Renders field
+         * @return {jQuery}
+         */
+        render: function () {
+            var html = FormTemplates.field(this.descriptor),
+                result = JiraUtil.extractScripts(html); // JRADEV-9069  Pull out custom field js to be executed post render
+
+            this.$element.html(result.html)
+                .addClass("qf-field")
+                .data("model", this);
+            return {
+                element: this.$element,
+                scripts: result.scripts
+            };
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.ConfigurableField
+ */
+AJS.namespace('JIRA.Forms.ConfigurableField', null, require('quick-edit/form/field/configurable'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/model/model.js' */
+/**
+ * @module quick-edit/form/model
+ */
+define('quick-edit/form/model', [
+    'quick-edit/util/class',
+    'jira/util/data/meta',
+    'jira/util/objects',
+    'jira/ajs/ajax/smart-ajax',
+    'jquery'
+], function(
+    Class,
+    Meta,
+    Objects,
+    SmartAjax,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * Retrieval mechanism for fields.
+     *
+     * Note: the fieldsResource should return an object of JSON entities that conform to:
+     * fields: [{id: <string>, editHtml: <string>, label: <string>, required <boolean>}, ...]
+     * userFields: [<string>, ...]
+     *
+     * @class FormModel
+     * @extends Class
+     */
+    return Class.extend({
+
+        /**
+         * @constructor
+         * @param options
+         * ... {String} userFieldsResource - url of server resource that will be POSTed to with the ids of the fields to be shown
+         * ... {String} fieldsResource - url of server resource that will be user to request meta data about all the available fields
+         */
+        init: function (options) {
+            this.userFieldsResource = options.userFieldsResource;
+            this.fieldsResource = options.fieldsResource;
+            this.retainedFields = [];
+            this._hasRetainFeature = false;
+            this._hasVisibilityFeature = true;
+        },
+
+        /**
+         * Gets field resource
+         */
+        getFieldsResource: function () {
+            return this.fieldsResource;
+        },
+
+        /**
+         * Returns the latest XSRF token returned by the server.
+         */
+        getAtlToken: function() {
+            return this.atlToken;
+        },
+
+        /**
+         * Returns the form token.
+         */
+        getFormToken: function() {
+            return this.formToken;
+        },
+
+        /**
+         * Gets active fields, by default this is just the user defined fields
+         */
+        getActiveFieldIds: function () {
+            return this.getUserFields();
+        },
+
+        /**
+         * Specifies field should retain its value for next time
+         *
+         * @param {String} id - field id
+         */
+        addFieldToRetainValue: function (id) {
+            if (this._hasRetainFeature) {
+                this.removeFieldToRetainValue(id); // avoid duplicates
+                this.retainedFields.push(id);
+            } else {
+                throw new Error("getFieldsWithRetainedValues: cannot be called. Must enable retain feature first by " +
+                    "specifiying [_hasRetainFeature=true]")
+            }
+        },
+
+        clearRetainedFields: function () {
+            this.retainedFields = [];
+        },
+
+        /**
+         * Specifies field should NOT retain its value for next time
+         *
+         * @param {String} id - field id
+         */
+        removeFieldToRetainValue: function (id) {
+            if (this._hasRetainFeature) {
+                var inArray = jQuery.inArray(id, this.retainedFields);
+                if (inArray != -1) {
+                    this.retainedFields.splice(inArray, 1);
+                }
+            } else {
+                throw new Error("getFieldsWithRetainedValues: cannot be called. Must enable retain feature first by " +
+                    "specifiying [_hasRetainFeature=true]")
+            }
+        },
+
+        /**
+         * Gets array of field of which values should be retained for next time
+         *
+         * @return {Array}
+         */
+        getFieldsWithRetainedValues: function () {
+            if (this._hasRetainFeature) {
+                return this.retainedFields;
+            } else {
+                throw new Error("getFieldsWithRetainedValues: cannot be called. Must enable retain feature first by " +
+                    "specifiying [_hasRetainFeature=true]")
+            }
+        },
+
+        /**
+         * Should we retain the value for this field
+         *
+         * @param field - field descriptor
+         */
+        hasRetainedValue: function (field) {
+            if (this._hasRetainFeature) {
+                return jQuery.inArray(field.id, this.retainedFields) !== -1;
+            } else {
+                throw new Error("HasRetainedValue: cannot be called. Must enable retain feature first by specifiying [_hasRetainFeature=true]")
+            }
+        },
+
+        /**
+         * Go back to the server and retrieve all the available fields
+         */
+        refresh: function (values) {
+            var instance = this,
+                deferred = jQuery.Deferred(),
+                data;
+
+            if (values) {
+                data = values + "&retainValues=true";
+            }
+
+            SmartAjax.makeRequest({
+                url: this.getFieldsResource(),
+                type: "POST", // has to be a post, otherwise we go over the query param character limit
+                data: data,
+                success: function (data) {
+                    instance._update(data);
+                },
+                complete: function (xhr, textStatus, smartAjaxResult) {
+                    if (smartAjaxResult.successful) {
+                        deferred.resolveWith(instance, arguments);
+                    } else {
+                        instance.triggerEvent("serverError", [smartAjaxResult]);
+                        deferred.rejectWith(instance, [smartAjaxResult]);
+                    }
+                }
+            });
+
+            return deferred.promise();
+        },
+
+        _update: function (data) {
+            this.atlToken = data.atl_token;
+            this.formToken = data.formToken;
+            this.fields = data.fields;
+            this.sortedTabs = data.sortedTabs;
+            this.userPreferences = data.userPreferences;
+        },
+
+        /**
+         * Manually set fields
+         *
+         * @param {Array} fields
+         */
+        setFields: function (fields) {
+            this.fields = fields;
+        },
+
+        /**
+         * Gets fields that can be configured - Added and removed from form
+         *
+         * @return jQuery.promise
+         */
+        getConfigurableFields: function () {
+            return this.getFields();
+        },
+
+        /**
+         * Gets all fields, see note on class description for structure.
+         *
+         * Note: this will throw an error if refesh hasn't been called first
+         *
+         * @return {Array} - Array of JSON describing field
+         */
+        getFields: function () {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            if (!this.fields) {
+                this.refresh().done(function () {
+                    deferred.resolve(instance.fields);
+                });
+            } else {
+                deferred.resolve(instance.fields);
+            }
+
+            return deferred.promise();
+        },
+
+        _mungeTabs: function (fields) {
+            var idx = 0,
+                tabs = [];
+
+            jQuery.each(fields, function (i, field) {
+                idx++;
+
+                if (field.tab) {
+                    if (!tabs[field.tab.position]) {
+                        tabs[field.tab.position] = Objects.copyObject(field.tab);
+                    }
+
+                    if (field.tab.position === 0) {
+                        tabs[field.tab.position].isFirst = true;
+                    }
+
+                    if (!tabs[field.tab.position].fields) {
+                        tabs[field.tab.position].fields = []
+                    }
+
+                    tabs[field.tab.position].fields.push(Objects.copyObject(field));
+                }
+            });
+
+            return tabs;
+        },
+
+        /**
+         * Gets tabs
+         *
+         * [{label: <string>, id: <string>, fields: [{id: <string>, editHtml: <string>, label: <string>, required <boolean>}]]
+     *
+         * @return jQuery.Promise
+         */
+        getTabs: function () {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            this.getFields().done(function (fields) {
+                var tabs = instance._mungeTabs(fields);
+                deferred.resolve(tabs);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets tabs sorted in alphabetical order
+         *
+         * @return jQuery.promise
+         */
+        getSortedTabs: function () {
+            var deferred = jQuery.Deferred();
+
+            if (!this.sortedTabs) {
+                this.refresh().done(function () {
+                    deferred.resolve(this.sortedTabs);
+                });
+            } else {
+                deferred.resolve(this.sortedTabs);
+            }
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets all user field ids <array>
+         *
+         * Note: this will throw an error if refesh hasn't been called first
+         *
+         * @return jQuery.Promise
+         */
+        getUserFields: function () {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            if (!this.userPreferences) {
+                this.refresh().done(function () {
+                    deferred.resolve(instance.userPreferences.fields);
+                });
+            } else {
+                deferred.resolve(instance.userPreferences.fields);
+            }
+
+            return deferred.promise();
+        },
+
+        /**
+         * Sends updated user fields back to server for persistance
+         *
+         * @param {Array<string>}userFields
+         * @return jQuery.Promise
+         */
+        setUserFields: function (userFields) {
+            var data = {};
+            data.fields = userFields;
+            return this.updateUserPrefs(data);
+        },
+
+        /**
+         * Should the form allow the user to "retain" a fields value for next time
+         *
+         * @return Boolean
+         */
+        hasRetainFeature: function () {
+            return !!this._hasRetainFeature;
+        },
+
+        /**
+         * Should the form allow the user to add and remove fields
+         *
+         * @return Boolean
+         */
+        hasVisibilityFeature: function () {
+            return !!this._hasVisibilityFeature;
+        },
+
+        /**
+         * Gets a boolean value if the quick form or full form should be shown
+         *
+         * @return jQuery.Promise
+         */
+        getUseConfigurableForm: function () {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            if (!this.userPreferences) {
+                this.refresh().done(function () {
+                    deferred.resolve(instance.userPreferences.useQuickForm);
+                }).fail(function () {
+                    deferred.reject();
+                });
+            } else {
+                deferred.resolve(instance.userPreferences.useQuickForm)
+            }
+
+            return deferred.promise();
+        },
+
+        /**
+         * Sets whether to use Configurable or Unconfigurable forms
+         *
+         * @param {Boolean} use
+         * @return jQuery.Promise
+         */
+        setUseConfigurableForm: function (use) {
+            var data = {};
+            data.useQuickForm = use;
+            return this.updateUserPrefs(data);
+        },
+
+        /**
+         * Updates user prefs in bulk
+         *
+         * @param data
+         * ... {Array<String>} fields
+         * ... {Boolean} useQuickForm
+         */
+        updateUserPrefs: function (data) {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            if (Meta.get("remote-user") === "") {
+                deferred.done();
+                return deferred.promise();
+            }
+
+            if (!this.userPreferences) {
+                deferred.reject();
+                return deferred.promise();
+            }
+
+            if (!data.fields) {
+                data.fields = this.userPreferences.fields;
+            }
+
+            if (typeof data.showWelcomeScreen === "undefined") {
+                data.showWelcomeScreen = this.userPreferences.showWelcomeScreen;
+            }
+
+            if (typeof data.useQuickForm === "undefined") {
+                data.useQuickForm = this.userPreferences.useQuickForm;
+            }
+
+            return SmartAjax.makeRequest({
+                url: this.userFieldsResource,
+                type: "POST",
+                data: JSON.stringify(data),
+                dataType: "json",
+                contentType: "application/json",
+                complete: function (xhr, textStatus, smartAjaxResult) {
+                    if (smartAjaxResult.successful) {
+                        instance.userPreferences = data;
+                    } else {
+                        instance.triggerEvent("serverError", [smartAjaxResult]);
+                    }
+                }
+            })
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.Model
+ */
+AJS.namespace('JIRA.Forms.Model', null, require('quick-edit/form/model'));
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/model/create-issue.js' */
+/**
+ * @module quick-edit/form/model/create-issue
+ */
+define('quick-edit/form/model/create-issue', [
+    'quick-edit/form/model',
+    'wrm/context-path',
+    'underscore',
+    'jquery'
+], function(
+    FormModel,
+    contextPath,
+    _,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A special Model for quick create. Has special handling for setup fields, project an issue type
+     *
+     * @class CreateIssueFormModel
+     * @extends FormModel
+     */
+    return FormModel.extend({
+        DEFAULT_NON_RETAINED_FIELDS : ["summary", "description", "timetracking", "timetracking_originalestimate",
+            "timetracking_remainingestimate", "worklog", "worklog_startDate", "worklog_timeLogged", "worklog_newEstimate",
+            "worklog_adjustmentAmount", "attachment"],
+
+        CUSTOMFIELD_PATTERN: /^(customfield_(\d+))(?:|\:(?:\d+))$/,
+        TIMETRACKING_PATTERN: /^timetracking_/,
+
+        /**
+         * @constructor
+         * @param {object} options
+         * ... {String} issueType - The initially selected issue type.
+         * ... {String} projectId - The initially selected project id.
+         * ... {String} parentIssueId - The parent issue id.
+         * ... {Array} nonRetainedFields - An array on non retained fields between quick creates. this will be extended with the defaults.
+         */
+        init: function (options) {
+            options = options || {};
+
+            this.userFieldsResource = contextPath() + "/rest/quickedit/1.0/userpreferences/create";
+            this._hasRetainFeature = true;
+            this._hasVisibilityFeature = true;
+            this.retainedFields = [];
+            this.dirtyFields = [];
+            // initIssueType and initProjectId allow you to override the default project and issue type.
+            this.initIssueType = options.issueType;
+            this.initProjectId = options.projectId;
+            this.parentIssueId = options.parentIssueId;
+
+            this.nonRetainedFields = this.DEFAULT_NON_RETAINED_FIELDS;
+            if (options.nonRetainedFields) {
+                this.nonRetainedFields = _.union(options.nonRetainedFields, this.DEFAULT_NON_RETAINED_FIELDS);
+            }
+        },
+
+        /**
+         * Gets parent issue id, if there is one
+         * @return {String}
+         */
+        getParentIssueId: function () {
+            return this.parentIssueId;
+        },
+
+        /**
+         * Checks to see if we are in multi create mode
+         *
+         * @return {Boolean}
+         */
+        isInMultipleMode: function () {
+            return this.multipleMode;
+        },
+
+        /**
+         * Sets if we are creating more than one issue at a time
+         *
+         * @param {Boolean} state
+         */
+        setIsMultipleMode: function (state) {
+            this.multipleMode = state;
+        },
+
+        /**
+         * Gets active fields. For Create Issue, this means all required fields also
+         */
+        getActiveFieldIds: function () {
+            var instance = this,
+                deferred = jQuery.Deferred(),
+                activeFieldIds = [];
+
+            this.getUserFields().done(function (userfields) {
+                jQuery.each(userfields, function (i, fieldId) {
+                    activeFieldIds.push(fieldId);
+                });
+
+                instance.getRequiredFields().done(function (requiredFields) {
+                    jQuery.each(requiredFields, function (i, requiredField) {
+                        if (jQuery.inArray(requiredField.id, activeFieldIds) === -1) {
+                            activeFieldIds.push(requiredField.id);
+                        }
+                    });
+                    deferred.resolve(activeFieldIds);
+                });
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Specifies on a per field basis if it's visibility can be configured. Can it be added and removed from the form.
+         * In the case of quick create, required fields can not be removed.
+         *
+         * @param descriptor - field descriptor
+         * @return {Boolean}
+         */
+        hasVisibilityFeature: function (descriptor) {
+            return !descriptor.required;
+        },
+
+        /**
+         * Gets fields resource url, adding initIssueType & initProjectId to the request if available.
+         *
+         * initIssueType and initProjectId allow you to override the default project and issue type.
+         *
+         * @return {String}
+         */
+        getFieldsResource: function () {
+            var fieldsResource =  contextPath() + "/secure/QuickCreateIssue!default.jspa?decorator=none";
+
+            if (this.parentIssueId) {
+                return fieldsResource + "&parentIssueId=" + this.parentIssueId;
+            }
+
+            if (this.initIssueType) {
+                fieldsResource = fieldsResource + "&issuetype=" + this.initIssueType;
+                delete this.initIssueType;
+            }
+
+            if (this.initProjectId) {
+                fieldsResource = fieldsResource + "&pid=" + this.initProjectId;
+                delete this.initProjectId;
+            }
+
+            return fieldsResource;
+        },
+
+        /**
+         * Sets field values to retain.
+         * Note, you can only force retention of fields that are not in the non retained fields list.
+         *
+         * @param id
+         * @param force - always retain.
+         */
+        addFieldToRetainValue: function (id, force) {
+            var isRetainedField = !_.contains(this.nonRetainedFields, id);
+            var isNotFileAttachmentField = id.match(/^filetoconvert/) !== null; // don't track these fields
+
+            if (isRetainedField || isNotFileAttachmentField || force) {
+                this._super(id);
+            }
+        },
+
+        /**
+         * Gets required fields
+         */
+        getRequiredFields: function () {
+            var deferred = jQuery.Deferred(),
+                requiredFields = [];
+
+            this.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    if (field.required) {
+                        requiredFields.push(field);
+                    }
+                });
+                deferred.resolve(requiredFields);
+            });
+
+            return deferred.promise();
+        },
+
+
+        /**
+         * Gets fields that can be configured. Configured meaning, fields that can have features such as pinned values and
+         * visibility toggling applied to them
+         *
+         * @return {jQuery.Promise}
+         */
+        getConfigurableFields: function () {
+            var deferred = jQuery.Deferred(),
+                issueFields = [];
+
+            this.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    if (field.id !== "project" && field.id !== "issuetype") {
+                        issueFields.push(field);
+                    }
+                });
+
+                deferred.resolve(issueFields);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets project and issue type field. Used to get the correct fields for creating an issue.
+         */
+        getIssueSetupFields: function () {
+            var deferred = jQuery.Deferred(),
+                issueSetupFields = [];
+
+            this.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    if (field.id === "project" || field.id === "issuetype") {
+                        issueSetupFields.push(field);
+                    }
+                });
+                deferred.resolve(issueSetupFields);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Mark given field as dirty, telling us that it's value was provided by user
+         *
+         * @param fieldId
+         */
+        markFieldAsDirty: function(fieldId) {
+            fieldId = this.normalizeCustomFieldId(fieldId);
+
+            if(!this.fieldIsDirty(fieldId)) {
+                this.dirtyFields.push(fieldId);
+            }
+        },
+
+        /**
+         * Check whether field value was provided by user
+         *
+         * @param fieldId
+         * @returns {Boolean}
+         */
+        fieldIsDirty: function(fieldId) {
+            return _.contains(this.dirtyFields, fieldId);
+        },
+
+        /**
+         * For given field id it will return true if it is coming from a custom field
+         * @param fieldId
+         * @returns {Boolean}
+         */
+        isCustomFieldId: function(fieldId) {
+            return fieldId && !!fieldId.match(this.CUSTOMFIELD_PATTERN);
+        },
+
+        isTimetrackingFieldId: function(fieldId) {
+            return fieldId && !!fieldId.match(this.TIMETRACKING_PATTERN);
+        },
+
+        /**
+         * For custom fields with multiple inputs it will return id that does not contain any suffix (i.e. ":1" for cascading select)
+         * @param fieldId
+         * @returns {String}
+         */
+        normalizeCustomFieldId: function(fieldId) {
+            if(this.isCustomFieldId(fieldId)) {
+                return fieldId.match(this.CUSTOMFIELD_PATTERN)[1];
+            } else {
+                return fieldId;
+            }
+        },
+
+        normalizeFieldParam: function(paramName, paramValue) {
+            if(paramName == 'filetoconvert') {
+                return paramName + '-' + paramValue;
+            } else if(this.isCustomFieldId(paramName)) {
+                return this.normalizeCustomFieldId(paramName);
+            } else if(this.isTimetrackingFieldId(paramName)) {
+                return 'timetracking';
+            } else {
+                return paramName;
+            }
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.CreateIssueModel
+ */
+AJS.namespace('JIRA.Forms.CreateIssueModel', null, require('quick-edit/form/model/create-issue'));
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/model/edit-issue.js' */
+/**
+ * @module quick-edit/form/model/edit-issue
+ */
+define('quick-edit/form/model/edit-issue', [
+    'quick-edit/form/model',
+    'underscore',
+    'jquery'
+], function(
+    FormModel,
+    _,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A special Model for quick edit. Has special handling for comment field. Comment field can be toggled on and off on
+     * configurable form. On unconfigurable form it is always present.
+     *
+     * @class EditIssueFormModel
+     * @extends FormModel
+     */
+    return FormModel.extend({
+        /**
+         * Gets tabs removing comment field if it is present.
+         *
+         * @return jQuery.promise
+         */
+        getUnconfigurableTabs: function () {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            instance.getTabs().done(function (tabs) {
+                var newTabRef = tabs.slice(0); // Create a new array reference so we do not modify existing
+
+                newTabRef[0].fields = newTabRef[0].fields.slice(0);
+
+                jQuery.each(newTabRef[0].fields, function (i, field) {
+                    if (field.id === "comment") {
+                        newTabRef[0].fields.splice(i, 1);
+                        return false; // bail
+                    }
+                });
+
+                deferred.resolve(newTabRef);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets comment field
+         *
+         * @return jQuery.promise
+         */
+        getCommentField: function () {
+            var deferred = jQuery.Deferred();
+
+            this.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    if (field.id === "comment") {
+                        deferred.resolve(field);
+                    }
+                });
+
+                deferred.reject();
+            });
+
+            return deferred.promise();
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.EditIssueModel
+ */
+AJS.namespace('JIRA.Forms.EditIssueModel', null, require('quick-edit/form/model/edit-issue'));
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/model/factory/edit-issue.js' */
+/**
+ * @module quick-edit/form/model/factory/edit-issue
+ */
+define('quick-edit/form/model/factory/edit-issue', [
+    'quick-edit/form/model/edit-issue',
+    'wrm/context-path'
+], function(
+    EditIssueFormModel,
+    contextPath
+){
+    'use strict';
+
+    /**
+     * Factory to create {@link EditIssueFormModel}
+     *
+     * @param {String, Number} issueId
+     * @return EditIssueFormModel
+     */
+     return function (issueId) {
+        return new EditIssueFormModel({
+            fieldsResource: contextPath() + "/secure/QuickEditIssue!default.jspa?issueId=" + issueId + "&decorator=none",
+            userFieldsResource: contextPath() + "/rest/quickedit/1.0/userpreferences/edit"
+        });
+    };
+});
+
+/**
+ * @deprecated JIRA.Forms.Model.createQuickEditIssueModel
+ */
+AJS.namespace('JIRA.Forms.Model.createQuickEditIssueModel', null, require('quick-edit/form/model/factory/edit-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/helper/helper.js' */
+/**
+ * @module quick-edit/form/helper/helper
+ */
+define('quick-edit/form/helper/helper', [
+    'quick-edit/util/jira',
+    'quick-edit/form/model',
+    'quick-edit/util/class',
+    'jira/jquery/plugins/isdirty',
+    'jira/util/events',
+    'jira/dialog/dialog',
+    'underscore',
+    'jquery'
+], function(
+    JiraUtil,
+    FormsModel,
+    Class,
+    DirtyForm,
+    Events,
+    Dialog,
+    _,
+    jQuery
+){
+    'use strict';
+
+    var escapeHtml = AJS.escapeHTML;
+
+    /**
+     * A helper class to share between Configurable and Unconfigurable forms
+     *
+     * @class CreateIssueFormHelper
+     * @extends Class
+     */
+    return Class.extend({
+        init: function (form) {
+            this.form = form
+        },
+
+        /**
+         * If the create another checkbox is checked will notify the user of newly created issue and clear the form
+         * (Except for pinned values). Otherwise, directs the browser to the newly created issue.
+         *
+         * @param data
+         * ... {String} issueKey
+         */
+        handleSubmitSuccess: function (data) {
+            function issueCreatedMessage(issueKey, summary, url) {
+                var link = '<a href="' + url + '">' + issueKey + ' - ' + escapeHtml(summary) + '</a>';
+                return AJS.format("Issue {0} has been successfully created", link);
+            }
+
+            var instance = this,
+                summary = this.form.$element.find("#summary").val();
+
+            data.summary = summary;
+
+            this.form.triggerEvent("submitted", [data, this]);
+            this.form.triggerEvent("issueCreated", [data, this], true);
+
+            if (instance.form.model.isInMultipleMode()) {
+
+                this.form.render().done(function () {
+                    var message = issueCreatedMessage(data.issueKey, summary, contextPath + "/browse/" + data.issueKey);
+                    JiraUtil.applySuccessMessageToForm(instance.form.getForm(), message);
+                });
+
+            } else {
+                this.form.triggerEvent("sessionComplete");
+            }
+        },
+
+        /**
+         * Gets checkbox that when checked allows multiple issue creating
+         *
+         * @return jQuery
+         */
+        getCreateAnotherCheckbox: function () {
+            return this.form.$element.find("#qf-create-another");
+        },
+
+        /**
+         * Determines if we are creating more entries.
+         *
+         * @return Boolean
+         */
+        isInMultipleMode: function () {
+            return this.getCreateAnotherCheckbox().is(":checked");
+        },
+
+        /**
+         * Gets project <select>
+         *
+         * @return {jQuery}
+         */
+        getProjectField: function () {
+            return this.form.$element.find(".issue-setup-fields #project");
+        },
+
+        /**
+         * Gets issueType <select>
+         *
+         * @return {jQuery}
+         */
+        getIssueTypeField: function () {
+            return this.form.$element.find(".issue-setup-fields #issuetype");
+        },
+
+        /**
+         * Serializes form and specifies which form values to retain. This is different to a normal serialization as
+         * it includes any other fields set during the session. JRADEV-9466 e.g you can set a priority then specify a project that hasn't
+         * got a priority field then come back to the original project and the priority will still be remembered.
+         *
+         * @return String
+         */
+        serializeForToggle: function (projectHasChanged) {
+
+            if (!this.form.model.hasRetainFeature()) {
+                return this.form.getForm().serialize();
+            }
+
+            // All fields (and their values) that were ever displayed to the user, before switching to this project/issuetype screen
+            var prevActiveFields = this.form.model.prevActiveFields || [];
+
+            // All fields (and their values) on the current project/issuetype screen. Including those not visible.
+            var currentSerialization = this.form.getForm().serializeArray();
+
+            // a shorthand
+            var normalizeParam = function(param) {
+                return this.form.model.normalizeFieldParam(param.name, param.value);
+            }.bind(this);
+
+            // The ids of the fields that are currently visible.
+            var currentActiveIds = this.form.getActiveFieldIds();
+
+            // An array of all the active fields that need to be passed onto the next form
+            var currentActive = jQuery.grep(currentSerialization, function (param) {
+                return jQuery.inArray(normalizeParam(param), currentActiveIds) !== -1;
+            });
+
+            // A filtered list of the previously active fields that are NOT visible on the current screen
+            var filteredPreviousActive = jQuery.grep(prevActiveFields, function (param) {
+                return jQuery.inArray(normalizeParam(param), currentActiveIds) === -1;
+            });
+
+            // A filtered list of the previously active field ids that are NOT visible on the current screen
+            var filteredPrevActiveIds = jQuery.map(filteredPreviousActive, function (param) {
+                return normalizeParam(param);
+            });
+
+            // A combined list of the previously active and currently active. Representing what should be retained when we
+            // switch issue types
+            var combinedActive = jQuery.merge(currentActive, filteredPreviousActive);
+
+            // A combined list of the previously active and currently active. Representing what should be retained when we
+            // switch issue types
+            var combinedActiveIds = jQuery.merge(currentActiveIds, filteredPrevActiveIds);
+
+            // Update the history of active fields
+            this.form.model.prevActiveFields = jQuery.extend(true, [], combinedActive);
+
+            // If the project has changed, then execute any actions specific to project changes.
+            if (projectHasChanged) {
+                combinedActiveIds = this.executeProjectChangedSecuritySettingAction(combinedActiveIds);
+            }
+
+            // do not retain custom field values that are not dirty, so theirs values may get default from another context
+            combinedActiveIds = combinedActiveIds.filter(function(id) {
+                // either it's not custom field or it is dirty
+                return !this.form.model.isCustomFieldId(id) || this.form.model.fieldIsDirty(id);
+            }.bind(this));
+
+            // Prepare the list of paramaters we will post to the server
+            var postParams = jQuery.merge([{name: "retainValues", value: true}], combinedActive);
+
+            // Don't forget project and issue type. We always need this
+            jQuery.each(currentSerialization, function (i, param) {
+                if (param.name === "pid" || param.name === "issuetype") {
+                    postParams.push(param)
+                }
+            });
+
+            // So the server knows not to clear retained fields
+            postParams.push({name: "toggle", value: true});
+
+            // Let the server know that we want to retain all the values we send it. So the next screen will have the
+            // pre populated values
+            jQuery.each(combinedActiveIds, function (i, id) {
+                postParams.push({name: "fieldsToRetain", value: id});
+            });
+
+            postParams.push({name: "formToken", value: this.form.model.getFormToken()});
+
+            // Finally format the data into a post body.
+            return jQuery.param(postParams)
+
+        },
+
+        /**
+         * When a project changes, remove the 'security' setting from those that are retained to
+         * force it to set the default.
+         */
+        executeProjectChangedSecuritySettingAction: function (fieldsToSendIds) {
+            return _.reject(fieldsToSendIds, function(v) { return v === "security"; });
+        },
+
+        /**
+         * Prepare any fields to be retained.  This incorporates some logic
+         * on fields that should not be retained and should take their default values
+         * when projects or issue types change.
+         */
+        prepareFieldsToRetain: function (combinedActiveIds, postParams) {
+            jQuery.each(combinedActiveIds, function (i, id) {
+                postParams.push({name: "fieldsToRetain", value: id});
+            });
+
+            return postParams;
+        },
+
+        /**
+         * Sets issue type and updates form (by rerendering it) with the correct fields
+         *
+         * @param {String} issueType
+         */
+        setIssueType: function () {
+            var instance = this,
+                serialisedForm = this.serializeForToggle();
+            this.form.invalidateFieldsCache(); // invalidate fields cache
+            this.form.disable();
+            this.form.render(serialisedForm).done(function () {
+                instance.form.enable();
+            });
+        },
+
+
+        /**
+         * Sets projectId and updates form (by rerendering it) with the correct fields
+         *
+         * @param projectId
+         */
+        setProjectId: function () {
+            var instance = this,
+                serialisedForm = this.serializeForToggle(true);
+            this.form.invalidateFieldsCache(); // invalidate fields cache
+            this.form.disable();
+            this.form.render(serialisedForm).done(function () {
+                instance.form.enable();
+            });
+        },
+
+        /**
+         * Checks if the form is currently rendered in a dirty state, so this state could be preserved after changing the issue type
+         * See: https://jira.atlassian.com/browse/JRA-38151
+         */
+        saveFormDirtyStatus: function () {
+            this.form.isDirty = this.form.getForm().isDirty();
+        },
+
+        /**
+         * Restores the dirty status after the new issue type form is rendered
+         * See: https://jira.atlassian.com/browse/JRA-38151
+         */
+        restoreFormDirtyStatus: function () {
+            if( this.form.isDirty ) {
+                this.form.getForm().addClass(DirtyForm.ClassNames.BY_DEFAULT);
+            }
+        },
+
+        /**
+         * Decorates form with events
+         */
+        decorate: function () {
+            var instance = this;
+
+            this.getProjectField().change(function () {
+                instance.saveFormDirtyStatus();
+                Events.trigger("dialogBeforeContentChange",["projectId", this.value, Dialog.current.options.id]);
+                instance.setProjectId(this.value);
+            });
+
+            this.getIssueTypeField().change(function () {
+                instance.saveFormDirtyStatus();
+                Events.trigger("dialogBeforeContentChange",["issueType", this.value, Dialog.current.options.id]);
+                instance.setIssueType(this.value);
+            });
+
+            this.getCreateAnotherCheckbox().change(function () {
+                instance.form.model.setIsMultipleMode(this.checked);
+            });
+        },
+
+        /**
+         * Decorate form fields with events
+         */
+        decorateFields: function() {
+            var instance = this;
+
+            // clear listeners from our namespace and bind them again
+            this.form.$element.find('*[id^="customfield_"]').
+                off("change.customField").
+                on("change.customField", function() {
+                    if (instance.form.model.isCustomFieldId(this.name)) {
+                        instance.form.model.markFieldAsDirty(this.name);
+                    }
+                });
+        },
+
+        sendQuickEditAnalyticsEvent: function(args) {
+            var instance = args.instance;
+            var name = args.name;
+            var customFields;
+            var field;
+
+            var allFormFields = instance.model.fields.map(function(field) {
+                return {
+                    id: field.id,
+                    required: field.required
+                };
+            });
+
+            if (args.field) {
+                field = {
+                    id: args.field.descriptor.id,
+                    required: args.field.descriptor.required
+                }
+            }
+
+            instance.model.getActiveFieldIds().then(function(ids) {
+                customFields = allFormFields.filter(function(field) {
+                    return ids.some(function(fieldId) {
+                        return fieldId === field.id;
+                    });
+                });
+
+                AJS.trigger('analyticsEvent', {
+                    name: name,
+                    data: {
+                        allFieldsShown: args.allFieldsShown,
+                        field: JSON.stringify(field),
+                        allFields: JSON.stringify(allFormFields),
+                        displayedFields: args.allFieldsShown ? JSON.stringify(allFormFields) :
+                          JSON.stringify(customFields)
+                    }
+                });
+            });
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.CreateIssueHelper
+ */
+AJS.namespace('JIRA.Forms.CreateIssueHelper', null, require('quick-edit/form/helper/helper'));
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/abstract/abstract.js' */
+/**
+ * @module quick-edit/form/abstract
+ */
+define('quick-edit/form/abstract', [
+    'quick-edit/util/jira',
+    'quick-edit/util/control',
+    'jira/ajs/ajax/smart-ajax',
+    'jira/dialog/form-dialog',
+    'jira/dialog/dialog',
+    'jira/util/events/types',
+    'jira/util/events',
+    'jira/util/browser',
+    'jquery',
+    'underscore'
+], function(
+    JiraUtil,
+    Control,
+    SmartAjax,
+    FormDialog,
+    Dialog,
+    EventTypes,
+    Events,
+    Browser,
+    jQuery,
+    _
+){
+    'use strict';
+
+    var extractBodyFromResponse = AJS.extractBodyFromResponse;
+    var log = AJS.log;
+
+    /**
+     * A View that contains common logic for configurable and unconfigurable forms.
+     *
+     * @class AbstractForm
+     * @extends Control
+     */
+    return Control.extend({
+        /**
+         * Serialises form data and posts it to specified action. If the server returns with validation errors (400), they
+         * will be added inline to the form. If the server returns success the window will be reloaded.
+         */
+        submit: function () {
+            var instance = this;
+
+            instance.getForm().addClass("submitting");
+            this.triggerEvent("submitting",[],true)
+            return SmartAjax.makeRequest({
+                url: this.getAction(),
+                type: "POST",
+                beforeSend: function () {
+                    instance.disable();
+                },
+                data: this.serialize(),
+                complete: function (xhr, textStatus, smartAjaxResult) {
+                    var data = smartAjaxResult.data;
+
+                    instance.getForm().find(".aui-message-context").remove(); // remove all previous messages
+
+                    instance.enable();
+
+                    // remove stale errors
+                    instance.getForm().find(".error").remove();
+
+                    if (smartAjaxResult.successful) {
+                        instance.performAnalytics();
+
+                        if (data && data.fields) {
+                            instance.invalidateFieldsCache();
+                            instance.model.setFields(data.fields);
+                        }
+
+                        if (typeof data === "string") {
+                            // XSRF token error
+                            var responseBody = jQuery(extractBodyFromResponse(data));
+                            var updatedXSRFToken = responseBody.find("#atl_token").val();
+
+                            // Update XSRFToken
+                            if (updatedXSRFToken) {
+                                instance.model.atlToken = updatedXSRFToken;
+                                instance.getForm().find('input[name="atl_token"]').val(updatedXSRFToken);
+                            }
+
+                            // Show dialog to retry with new token
+                            var xsrfDialog = new FormDialog({
+                                offsetTarget: "body",
+                                content: responseBody
+                            });
+
+                            // If clicking the XSRF dialog's "Retry" button worked, continue.
+                            xsrfDialog._handleServerSuccess = function () {
+                                // Remove previous dialog from stack, otherwise hiding this dialog will show the previous one
+                                if (xsrfDialog.prev) {
+                                    xsrfDialog.prev._removeStackState();
+                                    xsrfDialog.prev._resetWindowTitle();
+                                    xsrfDialog._removeStackState();
+                                }
+                                xsrfDialog.hide();
+                                instance.triggerEvent("sessionComplete", [], true);
+                                instance.handleSubmitSuccess();
+                            };
+
+                            // If clicking the XSRF dialog's "Retry" button didn't work, show errors in the original form
+                            xsrfDialog._handleServerError = function (xhr) {
+                                xsrfDialog.hide();
+                                instance.handleSubmitError(xhr);
+                            };
+
+                            xsrfDialog.show();
+                        } else  {
+                            instance.handleSubmitSuccess(smartAjaxResult.data);
+                        }
+
+                    } else {
+                        instance.handleSubmitError(xhr);
+                    }
+
+                    instance.getForm().removeClass("submitting");
+                }
+            });
+        },
+
+        /**
+         * Disables all form fields
+         */
+        disable: function () {
+            this.getForm().find(":input").attr("disabled", "disabled").trigger("disable");
+            this.getForm().find(":submit").attr("disabled", "disabled");
+
+        },
+
+        /**
+         * Enables all form fields
+         */
+        enable: function () {
+            this.getForm().find(":input").removeAttr("disabled").trigger("enable");
+            this.getForm().find(":submit").removeAttr("disabled");
+        },
+
+        /**
+         * Gets array of active fields in DOM order
+         *
+         * @return Array<String>
+         */
+        getActiveFieldIds: function () {
+            throw new Error("getActiveFieldIds: Abstract, must be implemented by sub class");
+        },
+
+        serialize: function (forceRetainAll) {
+
+            var instance = this,
+                postBody = this.getForm().serialize();
+
+            // So the server can reset certain fields when it refreshes the field content
+            if (this.model.isInMultipleMode && this.model.isInMultipleMode()) {
+                postBody = postBody + "&multipleMode=true";
+            }
+
+            if (this.model.hasRetainFeature()) {
+                this.model.clearRetainedFields();
+
+                // we retain all values, except the ones filtered by the model
+                jQuery.each(this.getActiveFieldIds(), function (i, fieldId) {
+                    instance.model.addFieldToRetainValue(fieldId, forceRetainAll);
+                });
+
+                jQuery.each(this.model.getFieldsWithRetainedValues(), function (i, id) {
+                    postBody = postBody + "&fieldsToRetain=" + id;
+                });
+            }
+
+            return postBody;
+        },
+
+        /**
+         * Delete fields reference which has the knock on effect of forcing us to go back to the model to get a fresh
+         * version of fields.
+         */
+        invalidateFieldsCache: function () {
+            delete this.fields;
+        },
+
+        /**
+         * Sets initial field to be focused after rendering
+         */
+        setInitialFocus: function () {
+            this.getFormContent().find(":input:first").focus();
+        },
+
+        /**
+         * Reloads window after form has been successfully submitted
+         */
+        handleSubmitSuccess: function () {
+            this.triggerEvent("submitted");
+            Browser.reloadViaWindowLocation();
+        },
+
+        performAnalytics: function() {
+            // Stolen from jira-issue-nav-plugin/src/main/resources/content/js/util/ClientAnalytics.js
+            var convertToLogEvent = function(name, parameters) {
+                var logMsg = "***** Analytics log [" + name + "]";
+                if(parameters) {
+                    logMsg += "[" + JSON.stringify(parameters) + "]";
+                }
+                log(logMsg);
+                if (AJS.EventQueue) {
+                    // Register an analytics object for this event.
+                    AJS.EventQueue.push({
+                        name: name,
+                        properties: parameters || {}
+                    });
+                }
+            };
+
+            // Given an array of objects (from e.g. this.getForm().serializeArray()) convert them into a map
+            // where we filter out some keys we don't care about (like the XSRF token) and keep the values in
+            // an array (so things like labels have all their values stored)
+            var toMap = function (objects)
+            {
+                var newMap = {};
+                var importantFields = _.filter(objects, function (field) {
+                    return !_.contains(["isCreateIssue", "isEditIssue", "atl_token", "hasWorkStarted"], field.name);
+                });
+                var nonEmptyFields = _.filter(importantFields, function(field) {
+                    return field.value != "";
+                });
+                _.each(nonEmptyFields, function (val) {
+                    var key = val.name;
+                    if (!_.has(newMap, key)) {
+                        newMap[key] = []
+                    }
+                    newMap[key].push(val.value);
+                });
+                return newMap
+            };
+
+            this.previousAnalytics = (function(formArray, previousData) {
+                var currentData = toMap(formArray);
+
+                var currentKeys = _.keys(currentData);
+                var previousKeys = _.keys(previousData.data);
+
+                var addedFields = _.difference(currentKeys, previousKeys);
+                var removedFields = _.difference(previousKeys, currentKeys);
+                var retainedFields = _.intersection(previousKeys, currentKeys);
+                var sameFields = _.filter(retainedFields, function (name) { return _.isEqual(previousData.data[name], currentData[name]); });
+                var changedFields = _.difference(retainedFields, sameFields);
+
+                var numCreates = previousData.count + 1;
+
+                var editForm = (Dialog.current.options.id === "edit-issue-dialog");
+
+                var difference = { "atlassian.numCreates": numCreates, "edit.form" : editForm };
+                _.each(addedFields, function (val) { difference[val] = "added"});
+                _.each(removedFields, function (val) { difference[val] = "removed"});
+                _.each(sameFields, function (val) { difference[val] = "same"});
+                _.each(changedFields, function (val) { difference[val] = "changed"});
+
+                convertToLogEvent("quick.create.fields", difference);
+
+                return { "data": currentData, "count": numCreates };
+
+            })(this.getForm().serializeArray(), this.previousAnalytics || { "data": {}, "count": 0});
+        },
+
+        addErrorMessage: function(error)    {
+            JiraUtil.applyErrorMessageToForm(this.getForm(), [error]);
+        },
+
+        handleSubmitError: function (xhr) {
+            var instance = this;
+            var errors;
+
+            if (!xhr.responseText) {
+                var smartAjaxResult = SmartAjax.SmartAjaxResult(xhr, undefined, xhr.statusText, '', false, undefined);
+                var error = SmartAjax.buildSimpleErrorContent(smartAjaxResult);
+                instance.addErrorMessage(error);
+            } else {
+                try {
+                    errors = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    // catch error
+                }
+
+                if (errors) {
+                    if (errors.errorMessages && errors.errorMessages.length) {
+                        JiraUtil.applyErrorMessageToForm(this.getForm(), errors.errorMessages[0]);
+                    }
+
+                    if (errors && errors.errors && xhr.status === 400) {
+                        // (JRADEV-6684) make sure they are all visibile before we apply the errors
+
+                        if (this.getFieldById) {
+                            jQuery.each(errors.errors, function (id) {
+                                if (/^timetracking/.test(id)) {
+                                    instance.getFieldById("timetracking").done(function (field) {
+                                        Events.trigger(EventTypes.VALIDATE_TIMETRACKING, [instance.$element]);
+                                        field.activate(true);
+                                    });
+                                } else if (/^worklog/.test(id)) {
+                                    instance.getFieldById("worklog").done(function (field) {
+                                        Events.trigger(EventTypes.VALIDATE_TIMETRACKING, [instance.$element]);
+                                        field.activate(true);
+                                    });
+                                } else {
+                                    instance.getFieldById(id).done(function (field) {
+                                        field.activate(true);
+                                    });
+                                }
+                            });
+                        }
+
+                        JiraUtil.applyErrorsToForm(this.getForm(), errors.errors);
+                        this.triggerEvent("validationError", [this, errors.errors], true);
+                    }
+
+                    // Scroll the first error in to view.
+                    var $errorElements = instance.$element.find(".error");
+                    if ($errorElements.length) {
+                        $errorElements[0].scrollIntoView(false); // TODO: Using browser-native method until JRA-36737 is fixed.
+                    }
+                }
+            }
+        },
+
+        /**
+         * Gets action to post form to
+         *
+         * @return String
+         */
+        getAction: function () {
+            return this.action;
+        },
+
+        /**
+         * Gets form content, this is where all the fields get appended to
+         * @return {jQuery}
+         */
+        getFormContent: function () {
+            return this.$element.find("div.content");
+        },
+
+        /**
+         * Gets form
+         * @return {jQuery}
+         */
+        getForm: function () {
+            return this.$element.find("form");
+        },
+
+        /**
+         * Creates Field View Class
+         */
+        createField: function () {
+            throw new Error("AbstractForm: You must implement [createField] method in subclass.");
+        },
+
+        /**
+         * Find the IDs for the attachment checkboxes that are currently checked.
+         * @param values querystring encoded values which will include any checked file attachments
+         * @returns {Array} the list of IDs of the file attachment input elements that are checked.
+         * @private
+         */
+        _getActiveAttachments: function(values) {
+            var ret = [];
+            if(!values) {
+                return ret;
+            }
+            var vars = values.split('&');
+            for (var i = 0; i < vars.length; i++) {
+                var pair = vars[i].split('=');
+                if (pair[0] == "filetoconvert") {
+                    ret.push(pair[1]);
+                }
+            }
+            return ret;
+        },
+
+        /**
+         * Checks and unchecks the input boxes for all attachments that should be checked.
+         * @param attachmentIds the IDs of the file attachment input elements to check.
+         * @private
+         */
+        _setActiveAttachments: function(attachmentIds) {
+            var $files = this.$element.find("input[name=filetoconvert]");
+            $files.each(function() {
+                var $fileCheckbox = jQuery(this);
+                var checked = _.contains(attachmentIds, $fileCheckbox.attr("value"));
+                $fileCheckbox.prop("checked", checked);
+            });
+        },
+
+        /**
+         * Renders complete form. If 'values' are defined then model will be refreshed (go to server) to get fields html
+         * with populated values.
+         *
+         * @param {String} serialized values to populate as field values
+         * @return jQuery.Promise
+         */
+        render: function (values) {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            var activeAttachments = instance._getActiveAttachments(values);
+
+            if (values) {
+                this.invalidateFieldsCache(); // delete reference to fields cache so that we actually get the refreshed fields html
+                this.model.refresh(values).done(function () {
+                    instance._render().done(function (el, scripts) {
+                        instance.triggerEvent("rendered", [instance.$element]);
+                        deferred.resolveWith(instance, [instance.$element, scripts]);
+                    });
+                });
+            } else {
+                instance._render().done(function (el, scripts) {
+                    instance.triggerEvent("rendered", [instance.$element]);
+                    deferred.resolveWith(instance, [instance.$element, scripts]);
+                });
+            }
+
+            deferred.always(function() {
+                instance._setActiveAttachments(activeAttachments);
+            });
+
+            return deferred.promise();
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.AbstractForm
+ */
+AJS.namespace('JIRA.Forms.AbstractForm', null, require('quick-edit/form/abstract'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/abstract/configurable.js' */
+/**
+ * @module quick-edit/form/abstract/configurable
+ */
+define('quick-edit/form/abstract/configurable', [
+    'quick-edit/form/abstract',
+    'quick-edit/form/field/configurable',
+    'quick-edit/form/helper/helper',
+    'jquery'
+], function(
+    AbstractForm,
+    ConfigurableField,
+    Helper,
+    jQuery
+) {
+    'use strict';
+
+    /**
+     * A View class that renders a form. The form provides controls that allows a user to configure which fields are shown
+     * using a picker (@see FieldPicker). Users can also configure the order of these fields using
+     * drag and drop.
+     *
+     * @class AbstractConfigurableForm
+     * @extends AbstractForm
+     */
+    return AbstractForm.extend({
+
+        /**
+         * Gets all fields
+         *
+         * @param Array<ConfigurableField> fields
+         * @return jQuery Promise
+         */
+        getFields: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            if (!this.fields) {
+                this.fields = [];
+
+                this.model.getConfigurableFields().done(function (fields) {
+                    jQuery.each(fields, function (i, descriptor) {
+                        var field = instance.createField(descriptor);
+                        instance.fields.push(field);
+
+                    });
+                    deferred.resolveWith(instance, [instance.fields]);
+                });
+            } else {
+                deferred.resolveWith(this, [this.fields]);
+            }
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets ids for all visible fields
+         * @return Array
+         */
+        getActiveFieldIds: function () {
+            var ids = [],
+                els = this.$element.find(".qf-field.qf-field-active:not(.qf-required), .qf-field.qf-required:not(.qf-field-active)");
+
+            jQuery.each(els, function (i, el) {
+                var $el = jQuery(el);
+                var model = $el.data("model");
+                var id = $el.data("field-id") || model && model.getId();
+
+                // We get the id from the field control we attached using jQuery data.
+                if(id != null) {
+                    ids.push(id);
+                }
+
+                // Attachments are a special case because their checkboxes are added dynamically and are not part of the "model"
+                if (id === "attachment") {
+                    $el.find('input[name=filetoconvert]').each(function() {
+                        ids.push(this.id);
+                    });
+
+                }
+            });
+
+            return ids;
+        },
+
+        /**
+         * Creates Field View
+         *
+         * @param descriptor
+         * @return {ConfigurableField}
+         */
+        createField: function (descriptor) {
+            descriptor.hasVisibilityFeature = this.model.hasVisibilityFeature(descriptor);
+
+            if (this.model.hasRetainFeature(descriptor)) {
+                descriptor.hasRetainFeature = true;
+                descriptor.retainValue = this.model.hasRetainedValue(descriptor);
+            }
+
+            var instance = this,
+                field = new ConfigurableField(descriptor),
+                helper = new Helper(instance);
+
+            if (descriptor.hasVisibilityFeature) {
+                // When we activate a field focus & persist it
+                field.bind("activated", function () {
+                    instance.model.setUserFields(instance.getActiveFieldIds());
+                    field.highlight();
+                    instance.triggerEvent("QuickForm.fieldAdded", [field]);
+
+                    helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.custom.added',
+                        field: field,
+                        instance: instance
+                    });
+                }).bind("disabled", function () {
+                    instance.model.setUserFields(instance.getActiveFieldIds());
+                    instance.triggerEvent("QuickForm.fieldRemoved", [field]);
+
+                    helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.custom.removed',
+                        field: field,
+                        instance: instance
+                    });
+                });
+            }
+
+            return field;
+        },
+
+        /**
+         * Gets the field view instance by id
+         *
+         * @param id
+         * @return jQuery.Promise
+         */
+        getFieldById: function (id) {
+            var instance = this,
+                deferred = jQuery.Deferred();
+
+            this.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    if (field.getId() === id) {
+                        deferred.resolveWith(instance, [field]);
+                    }
+                });
+
+                deferred.rejectWith(instance, []);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Determines if there are any visible fields
+         *
+         * @return Boolean
+         */
+        hasNoVisibleFields: function () {
+            var deferred = jQuery.Deferred();
+            deferred.resolve(this.getActiveFieldIds().length === 0);
+            return deferred.promise();
+        },
+
+        /**
+         * Renders form contents and applies sortable control
+         *
+         * @return jQuery.promise
+         */
+        renderFormContents: function () {
+            var deferred = jQuery.Deferred(),
+                scripts = jQuery(),
+                instance = this;
+
+            instance.getFields().done(function (fieldsResult) {
+                var fields = instance.reorderFieldsToRender(fieldsResult);
+                instance.model.getActiveFieldIds().done(function (activeIds) {
+                    jQuery.each(fields, function () {
+                        var result = this.render();
+                        // JRADEV-9069 Build up collection of all script tags to be executed post render
+                        // Look at FormContainer.render for actual execution
+                        scripts = scripts.add(result.scripts);
+                        instance.getFormContent().append(result.element);
+                    });
+
+                    // append active fields in prescribe order first
+                    jQuery.each(activeIds, function (i, fieldId) {
+                        jQuery.each(fields, function () {
+                            if (this.getId() === fieldId) {
+                                this.activate(true);
+                            }
+                        });
+                    });
+
+                    // Now the inactive ones. We have to append as the field values need to be serialized. Also if there
+                    // are any js controls they can be bound so that when we toggle the visibility they actually work.
+                    jQuery.each(fields, function () {
+                        if (!this.isActive()) {
+                            this.disable(true);
+                        }
+                    });
+
+                    // If we have no fields visible, append first 3 (JRADEV-6669)
+                    instance.hasNoVisibleFields().done(function (answer) {
+                        if (answer === true) {
+                            for (var i=0; i < 3; i++) {
+                                if (fields[i]) {
+                                    fields[i].activate(true);
+                                }
+                            }
+                        }
+
+                        deferred.resolveWith(this, [instance.$element, scripts]);
+                    });
+                });
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Reorder the fields which will be rendered onto form
+         *
+         * @param fields to reorder
+         * @returns Array
+         */
+        reorderFieldsToRender: function(fields) {
+            return fields;
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.AbstractConfigurableForm
+ */
+AJS.namespace('JIRA.Forms.AbstractConfigurableForm', null, require('quick-edit/form/abstract/configurable'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/abstract/unconfigurable.js' */
+/**
+ * @module quick-edit/form/abstract/unconfigurable
+ */
+define('quick-edit/form/abstract/unconfigurable', [
+    'quick-edit/form/abstract',
+    'quick-edit/templates/issue',
+    'jquery'
+], function(
+    AbstractForm,
+    IssueTemplates,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View class that renders a form that cannot be configured.
+     *
+     * @class AbstractUnconfigurableForm
+     * @extends AbstractForm
+     */
+    return AbstractForm.extend({
+        /**
+         * Gets HTML for fields. This includes tabs and tab panes if applicable.
+         *
+         * @return jQuery.Deferred
+         */
+        getFieldsHtml: function () {
+            var instance = this,
+                deferred = jQuery.Deferred(),
+                data = {};
+
+            this.model.getTabs().done(function (tabs) {
+                if (tabs.length === 1) {
+                    data.fields = tabs[0].fields;
+
+                } else {
+                    data.tabs = tabs;
+                    data.hasTabs = true;
+                }
+
+                deferred.resolveWith(instance, [IssueTemplates.issueFields(data)]);
+
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Gets ids for all fields
+         *
+         * @return {Array}
+         */
+        getActiveFieldIds: function () {
+            var ids = [];
+
+            this.model.getFields().done(function (fields) {
+                jQuery.each(fields, function (i, field) {
+                    ids.push(field.id);
+                });
+            });
+
+            if (ids.indexOf("attachment")) {
+                var fileToConvertIds = this.$element.find('input[name=filetoconvert]').map(function(idx, el) { return el.id }).toArray();
+                ids.push.apply(ids, fileToConvertIds);
+            }
+
+            return ids;
+        },
+
+        /**
+         * Gets all fields
+         *
+         * @param Array<ConfigurableField> fields
+         * @return jQuery Promise
+         */
+        getFields: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            if (!this.fields) {
+                this.fields = [];
+
+                this.model.getFields().done(function (fields) {
+                    jQuery.each(fields, function (i, descriptor) {
+                        var field = instance.createField(descriptor);
+                        instance.fields.push(field);
+
+                    });
+                    deferred.resolveWith(instance, [instance.fields]);
+                });
+            } else {
+                deferred.resolveWith(this, [this.fields]);
+            }
+
+            return deferred.promise();
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.AbstractUnconfigurableForm
+ */
+AJS.namespace('JIRA.Forms.AbstractUnconfigurableForm', null, require('quick-edit/form/abstract/unconfigurable'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/configurable/create-issue.js' */
+/**
+ * @module quick-edit/form/configurable/create-issue
+ */
+define('quick-edit/form/configurable/create-issue', [
+    'quick-edit/form/abstract/configurable',
+    'quick-edit/form/helper/helper',
+    'quick-edit/templates/issue',
+    'quick-edit/util/jira',
+    'jira/util/users/logged-in-user',
+    'wrm/context-path',
+    'jquery'
+], function(
+    AbstractConfigurableForm,
+    CreateIssueHelper,
+    IssueTemplates,
+    JiraUtil,
+    User,
+    contextPath,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View that renders a configurable version of the create issue form. This version allows you to reorder fields and
+     * add and remove fields.
+     *
+     * @class ConfigurableCreateIssueForm
+     * @extends AbstractConfigurableForm
+     */
+    return AbstractConfigurableForm.extend({
+        /**
+         * @constructor
+         * @param options
+         * ... {FormModel} model that gets fields and sets user preferences
+         * ... {string|number} issue id
+         * ... {Array<String>} globalEventNamespaces - Events will be triggered on these namespaces
+         * e.g CreateForm.switchedToConfigurableForm. CreateForm being the specified global namespace.
+         */
+        init: function (options) {
+            this.model = options.model;
+            this.helper = new CreateIssueHelper(this);
+            this.globalEventNamespaces = options.globalEventNamespaces || [];
+            this.issueId = options.issueId;
+            this.title = options.title;
+            this._serialization = {};
+
+            // Form values will be serialized and POSTed to this url
+            this.action = contextPath() + "/secure/QuickCreateIssue.jspa?decorator=none";
+            // The container element. All html will be injected into this guy.
+            this.$element = jQuery("<div />").addClass("qf-form qf-configurable-form");
+        },
+
+        /**
+         * Delegates submit success to Create Issue helper
+         * @param {issueKey: <String>} data
+         */
+        handleSubmitSuccess: function (data) {
+            return this.helper.handleSubmitSuccess(data);
+        },
+
+        /**
+         * Renders create issue specific chrome and furniture before delegating to super class for the rendering of fields
+         *
+         */
+        _render: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            instance.model.getIssueSetupFields().done(function (issueSetupFields) {
+                var html = IssueTemplates.createIssueForm({
+                    issueSetupFields: issueSetupFields,
+                    atlToken: instance.model.getAtlToken(),
+                    formToken: instance.model.getFormToken(),
+                    isConfigurable: true,
+                    title: instance.title,
+                    parentIssueId: instance.model.getParentIssueId(),
+                    multipleMode: instance.model.isInMultipleMode(),
+                    showFieldConfigurationToolBar: !User.isAnonymous(),
+                    modifierKey: JiraUtil.getModifierKey()
+                });
+
+                // add form chrome to container element
+                instance.$element.html(html);
+
+                instance.helper.decorate();
+
+                // render fields
+                instance.renderFormContents().done(function (el, scripts) {
+                    instance.helper.decorateFields();
+
+                    deferred.resolveWith(instance, [instance.$element, scripts]);
+                });
+
+                instance.bind("QuickForm.fieldAdded", function() {
+                    instance.helper.decorateFields();
+                });
+            });
+
+            return deferred.promise();
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.ConfigurableCreateIssueForm
+ */
+AJS.namespace('JIRA.Forms.ConfigurableCreateIssueForm', null, require('quick-edit/form/configurable/create-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/configurable/edit-issue.js' */
+/**
+ * @module quick-edit/form/configurable/edit-issue
+ */
+define('quick-edit/form/configurable/edit-issue', [
+    'quick-edit/form/abstract/configurable',
+    'quick-edit/util/jira',
+    'quick-edit/templates/issue',
+    'jira/util/users/logged-in-user',
+    'wrm/context-path',
+    'jquery'
+], function(
+    AbstractConfigurableForm,
+    JiraUtil,
+    IssueTemplates,
+    User,
+    contextPath,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View that renders a configurable version of the edit issue form. This version allows you to reorder fields and
+     * add and remove fields.
+     *
+     * @class ConfigurableEditIssueForm
+     * @extends AbstractConfigurableForm
+     */
+    return AbstractConfigurableForm.extend({
+        /**
+         * @constructor
+         * @param options
+         * ... {FormModel} model that gets fields and sets user preferences
+         * ... {String, Number} issue id
+         * ... {Array<String>} globalEventNamespaces - Events will be triggered on these namespaces
+         * e.g EditForm.switchedToConfigurableForm. EditForm being the specified global namespace.
+         */
+        init: function (options) {
+            this.model = options.model;
+            this.globalEventNamespaces = options.globalEventNamespaces || [];
+            this.issueId = options.issueId;
+            this.title = options.title;
+
+            // Form values will be serialized and POSTed to this url
+            this.action = contextPath() + "/secure/QuickEditIssue.jspa?issueId=" + options.issueId + "&decorator=none";
+            // The container element. All html will be injected into this guy.
+            this.$element = jQuery("<div />").addClass("qf-form qf-configurable-form");
+        },
+
+        /**
+         * Reloads window after form has been successfully submitted
+         */
+        handleSubmitSuccess: function (data) {
+            this.triggerEvent("submitted", [data]);
+            this.triggerEvent("issueEdited", [data], true);
+            this.triggerEvent("sessionComplete");
+        },
+
+        /**
+         * Determines if there are any visible fields. Comment field not included.
+         *
+         * @return Boolean
+         */
+        hasNoVisibleFields: function () {
+            var deferred = jQuery.Deferred(),
+                activeFieldIds = this.getActiveFieldIds();
+
+            this.model.getUserFields().done(function (userFields) {
+                if (userFields.length === 1 && userFields[0] === "comment") {
+                    deferred.resolve(false);
+                } else if (activeFieldIds.length === 0 || (activeFieldIds.length === 1 && activeFieldIds[0] === "comment")) {
+                    deferred.resolve(true);
+                } else {
+                    deferred.resolve(false);
+                }
+            });
+
+            return deferred.promise();
+        },
+
+        _render: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this,
+                html = IssueTemplates.editIssueForm({
+                    issueId: this.issueId,
+                    title: this.title,
+                    atlToken: instance.model.getAtlToken(),
+                    formToken: instance.model.getFormToken(),
+                    isConfigurable: true,
+                    modifierKey: JiraUtil.getModifierKey(),
+                    showFieldConfigurationToolBar: !User.isAnonymous()
+                });
+
+            this.$element.html(html); // add form chrome to container element
+
+            // render fields
+            instance.renderFormContents().done(function (el, scripts) {
+                instance.getFieldById("comment").done(function (field) {
+                    instance.getFormContent().append(field.$element); // put comment field at end of form
+                });
+                deferred.resolveWith(instance, [instance.$element, scripts]);
+            });
+
+            return deferred.promise();
+        }
+
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.ConfigurableEditIssueForm
+ */
+AJS.namespace('JIRA.Forms.ConfigurableEditIssueForm', null, require('quick-edit/form/configurable/edit-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/field-picker/button/configurable.js' */
+/**
+ * @module quick-edit/form/field-picker/button/configurable
+ */
+define('quick-edit/form/field-picker/button/configurable', [
+    'quick-edit/util/control',
+    'quick-edit/templates/form'
+], function(
+    Control,
+    FormTemplates
+){
+    'use strict';
+
+    /**
+     * A view class that renders a button that when clicked toggles the visibility of corresponding
+     * @see ConfigurableField
+     * @class ConfigurableButton
+     * @extends Control
+     */
+    return Control.extend({
+        /**
+         * @constructor
+         * @param options
+         * ... {field} {@link ConfigurableField}
+         */
+        init: function (options) {
+            var instance = this;
+
+            this.field = options.field;
+
+            this.field.bind("disabled", function () {
+                instance.$element.removeClass("qf-active");
+            }).bind("activated", function () {
+                instance.$element.addClass("qf-active");
+            });
+        },
+
+        /**
+         * Toggles visibility of field
+         */
+        toggle: function () {
+            if (this.field.isActive()) {
+                this.field.disable();
+            } else {
+                this.field.activate();
+            }
+        },
+
+        /**
+         * Gets field id
+         * @return {String}
+         */
+        getId: function () {
+            return this.field.getId();
+        },
+
+        /**
+         * Renders button
+         * @return {jQuery}
+         */
+        render: function () {
+            this.$element = jQuery(FormTemplates.configurablePickerButton({
+                required: this.field.descriptor.required,
+                label: this.field.getLabel(),
+                fieldId: this.field.getId(),
+                isActive: this.field.isActive()
+            }));
+            this._assignEvents("button", this.$element);
+            return this.$element;
+        },
+
+        _events: {
+            button: {
+                click: function (e) {
+                    this.toggle();
+                    e.preventDefault();
+                }
+            }
+        }
+    });
+
+});
+
+/**
+ * @deprecated JIRA.Forms.FieldPicker.ConfigurableButton
+ */
+AJS.namespace('JIRA.Forms.FieldPicker.ConfigurableButton', null, require('quick-edit/form/field-picker/button/configurable'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/field-picker/button/unconfigurable.js' */
+/**
+ * @module quick-edit/form/field-picker/button/unconfigurable
+ */
+define('quick-edit/form/field-picker/button/unconfigurable', [
+    'quick-edit/util/control',
+    'quick-edit/templates/form',
+    'jquery'
+], function(
+    Control,
+    FormTemplates,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * @class UnconfigurableButton
+     * @extends Control
+     */
+    return Control.extend({
+        init: function (descriptor) {
+            this.descriptor = descriptor;
+        },
+
+        render: function () {
+            this.$element = jQuery(FormTemplates.unconfigurablePickerButton({
+                required: this.descriptor.required,
+                label: this.descriptor.label,
+                fieldId: this.descriptor.id,
+                isActive: true
+            }));
+
+            return this.$element;
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.FieldPicker.UnconfigurableButton
+ */
+AJS.namespace('JIRA.Forms.FieldPicker.UnconfigurableButton', null, require('quick-edit/form/field-picker/button/unconfigurable'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/field-picker/field-picker.js' */
+/**
+ * @module quick-edit/form/field-picker
+ */
+define('quick-edit/form/field-picker', [
+    'quick-edit/form/field-picker/button/configurable',
+    'quick-edit/form/field-picker/button/unconfigurable',
+    'quick-edit/templates/form',
+    'quick-edit/util/control',
+    'aui/inline-dialog',
+    'jquery'
+], function(
+    ConfigurableButton,
+    UnconfigurableButton,
+    FormTemplates,
+    Control,
+    InlineDialog,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View class that renders a list of buttons representing fields in a
+     * {@link AbstractConfigurableForm}. These buttons can be clicked to
+     * toggle the visibility of the corresponding {@link ConfigurableField}.
+     *
+     * @see ConfigurableButton
+     * @see UnconfigurableButton
+     * @class FieldPicker
+     * @extends Control
+     */
+    return Control.extend({
+        INLINE_DIALOG_ID: "field_picker_popup",
+
+        /**
+         * @constructor
+         * @param {AbstractConfigurableForm} form
+         */
+        init: function () {
+            this.buttons = [];
+        },
+
+        switchToAll: function (silent) {
+            this.isConfigurable = false;
+            if (silent !== true) {
+                this.hideCallback = function () {
+                    this.remove();
+                };
+                this.inlineDialog.hide();
+                this.triggerEvent("switchedToAll");
+            }
+        },
+
+        setForm: function (form) {
+            this.form = form;
+        },
+
+        switchToCustom: function (silent) {
+            this.isConfigurable = true;
+            if (silent !== true) {
+                this.hideCallback = function () {
+                    this.remove();
+                };
+                this.inlineDialog.hide();
+                this.triggerEvent("switchedToCustom");
+            }
+        },
+
+        hideCallback: function () {
+        },
+
+        /**
+         * Builds an inline dialog that when triggered displays a list of fields checkboxes that can be modified to
+         * hide and show fields.
+         *
+         * @return AJS.InlineDialog
+         */
+        bindInlineDialog: function () {
+            var instance = this;
+            var $trigger = this.getInlineDialogTrigger();
+
+            function setContents (contents, trigger, doShowPopup) {
+                instance.render().done(function (body) {
+                    if (contents.find(".qf-picker").length === 0) {
+                        contents.html(body);
+                        contents.click(function (e) {
+                            e.stopPropagation();
+                        });
+                    }
+
+                    var offsetY = $trigger.offset().top - jQuery(window).scrollTop();
+                    var windowHeight = jQuery(window).height();
+                    var maxHeight = windowHeight - offsetY - 110;
+
+                    contents.find(".qf-picker-content").css("maxHeight", maxHeight);
+                    doShowPopup();
+                });
+            }
+
+            if (this.inlineDialog) {
+                this.inlineDialog.remove();
+            }
+
+            this.inlineDialog = InlineDialog($trigger, this.INLINE_DIALOG_ID, setContents, {
+                width: 450,
+                upfrontCallback: function () {
+                    $trigger.parent().addClass("active");
+                },
+                hideCallback: function () {
+                    $trigger.parent().removeClass("active");
+                },
+                nobind : true
+            });
+
+            // JRADEV-8535: Second click on configure fields should hide dialog
+            $trigger.click(function (e) {
+                if (jQuery("#inline-dialog-" + instance.INLINE_DIALOG_ID).is(":visible")) {
+                    instance.inlineDialog.hide();
+                } else {
+                    instance.inlineDialog.show();
+                }
+            });
+
+            return this.inlineDialog;
+        },
+
+        /**
+         * Gets the DOM element that when clicked opens inline dialog
+         *
+         * @return {jQuery}
+         */
+        getInlineDialogTrigger: function () {
+            return this.form.$element.find("#qf-field-picker-trigger");
+        },
+
+        /**
+         * Renders set of buttons to picker container
+         *
+         * @param fields - field descriptors
+         */
+        renderButtons: function (fields) {
+            var instance = this;
+            var $list = jQuery('<ul class="qf-picker-buttons" />')
+                .appendTo(this.$content);
+
+            jQuery.each(fields, function (i, field) {
+                var $li;
+                var button;
+
+                if (instance.isConfigurable) {
+                    instance.form.getFieldById(field.id).done(function (field) {
+                        if (field && field.hasVisibilityFeature()) {
+                            var $li = jQuery("<li />").appendTo($list);
+                            var button = new ConfigurableButton({
+                                field: field
+                            });
+                            button.render().appendTo($li);
+                            instance.buttons.push(button);
+                        }
+                    });
+                } else {
+                    button = new UnconfigurableButton(field);
+                    $li = jQuery("<li />").appendTo($list);
+                    button.render().appendTo($li);
+                }
+            });
+
+            if ($list.children().length === 0) {
+                $list.addClass("qf-no-fields").append("<li><em>" + "No fields can be configured for this tab" +"</em></li>")
+            }
+        },
+
+        /**
+         * Renders contents of picker
+         *
+         * @return jQuery.Promise
+         */
+        renderContents: function () {
+            var instance = this;
+            var deferred = jQuery.Deferred();
+
+            this.form.model.getSortedTabs().done(function (tabs) {
+                if (tabs.length === 1) {
+                    instance.renderButtons(tabs[0].fields);
+                } else {
+                    jQuery.each(tabs, function (i, tab) {
+                        if (tab.fields.length > 0) {
+                            jQuery('<h4><span></span></h4>').appendTo(instance.$content)
+                                .find("span").text(tab.label);
+                            instance.renderButtons(tab.fields);
+                        }
+                    });
+                }
+
+                deferred.resolveWith(instance, [instance.$element]);
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Shows inline dialog
+         */
+        show: function () {
+            this.inlineDialog.show();
+        },
+
+        /**
+         * Renders create issue picker with a link at the buttom to switch to "full create".
+         *
+         * @return jQuery.Promise
+         */
+        render: function () {
+            this.$element = jQuery(FormTemplates.fieldPicker({
+                isConfigurable: this.isConfigurable
+            }));
+            this.$content = this.$element.find(".qf-picker-content");
+
+            this._assignEvents("switchToCustom", this.$element.find(".qf-configurable"));
+            this._assignEvents("switchToAll", this.$element.find(".qf-unconfigurable"));
+
+            return this.renderContents();
+        },
+
+        _events: {
+            switchToCustom: {
+                click: function (e) {
+                    this.switchToCustom();
+                    e.preventDefault();
+                }
+            },
+            switchToAll: {
+                click: function (e) {
+                    this.switchToAll();
+                    e.preventDefault();
+                }
+            }
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.FieldPicker
+ */
+AJS.namespace('JIRA.Forms.FieldPicker', null, require('quick-edit/form/field-picker'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/container/container.js' */
+/**
+ * @module quick-edit/form/container
+ */
+define('quick-edit/form/container', [
+    'quick-edit/form/field-picker',
+    'quick-edit/util/jira',
+    'quick-edit/util/control',
+    'quick-edit/form/helper/helper',
+    'jira/dialog/form-dialog',
+    'jira/dialog/dialog',
+    'jira/util/navigator',
+    'jira/issue',
+    'jira/issuenavigator/issue-navigator',
+    'jquery'
+], function(
+    FieldPicker,
+    JiraUtil,
+    Control,
+    Helper,
+    FormDialog,
+    Dialog,
+    Navigator,
+    Issue,
+    IssueNavigator,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A controller for all the different 'QuickForm' views. Determines what view to show (Configurable, Unconfigurable)
+     * and what triggers them.
+     *
+     * @class FormContainer
+     * @extends Control
+     */
+    return Control.extend({
+        /**
+         * @constructor
+         * @param options - This can either be specifed as an object or a function that returns an object
+         * ... {Array<String>} globalEventNamespaces - Events will be triggered on these namespaces
+         * e.g EditForm.switchedToConfigurableForm. EditForm being the specified global namespace.
+         * ... {FormModel} model
+         * ... {FieldPicker} fieldPicker
+         * ... {AbstractForm} configurableForm
+         * ... {AbstractForm} unconfigurableForm
+         */
+        init: function (options) {
+            this.$element = jQuery("<div />").addClass("qf-container"); // Container element - All html will be appended here
+            this.options = JiraUtil.makePropertyFunc(options); // Treat all options as option function to get uniformity
+            this.fieldPicker = new FieldPicker();
+            this.successData = [];
+            this.helper = new Helper(this);
+        },
+
+        /**
+         * Wraps the render methods of each of the views to collect the html and append it to our container element ($element)
+         * Also does things like binds/triggers events and decorates content.
+         */
+        decorateRenderers: function () {
+            var instance = this;
+
+            if (!this.fieldPicker.decorated) {
+                this.fieldPicker.bind("switchedToAll", function () {
+                    instance.unconfigurableForm.render(instance.currentView.serialize(true)).done(function () {
+                        instance.fieldPicker.show();
+                    });
+
+                    instance.helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.switched.all',
+                        allFieldsShown: true,
+                        instance: instance
+                    });
+                });
+
+                this.fieldPicker.bind("switchedToCustom", function () {
+                    instance.configurableForm.render(instance.currentView.serialize(true)).done(function () {
+                        instance.fieldPicker.show();
+                    });
+
+                    instance.helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.switched.custom',
+                        allFieldsShown: false,
+                        instance: instance
+                    });
+                });
+
+                this.fieldPicker.decorated = true;
+            }
+
+            if (!this.configurableForm.decorated) {
+                this.configurableForm.bind("rendered", function (e, contents) {
+                    instance.currentView = instance.configurableForm;
+                    instance.fieldPicker.switchToCustom(true);
+                    instance.fieldPicker.setForm(instance.configurableForm);
+                    instance.fieldPicker.bindInlineDialog();
+                    instance.applyGlobalDecorator(contents);
+                    instance.model.setUseConfigurableForm(true);
+                    instance.triggerEvent("configurableFormRendered");
+                });
+
+                this.configurableForm.bind("submitted", function (e, data) {
+                    instance.successData.push(data);
+                    instance.triggerEvent("configurableFormSubmitted");
+
+                    instance.helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.submit.success',
+                        allFieldsShown: false,
+                        instance: instance
+                    });
+                });
+
+                this.configurableForm.decorated = true;
+            }
+
+            if (!this.unconfigurableForm.decorated) {
+                this.unconfigurableForm.bind("rendered", function (e, contents) {
+                    instance.fieldPicker.switchToAll(true);
+                    instance.fieldPicker.setForm(instance.unconfigurableForm);
+                    instance.fieldPicker.bindInlineDialog();
+                    instance.currentView = instance.unconfigurableForm;
+                    instance.applyGlobalDecorator(contents);
+                    instance.model.setUseConfigurableForm(false);
+                    instance.triggerEvent("unconfigurableFormRendered");
+                });
+
+                this.unconfigurableForm.bind("submitted", function (e, data) {
+                    instance.successData.push(data);
+                    instance.triggerEvent("unconfigurableFormSubmitted");
+
+                    instance.helper.sendQuickEditAnalyticsEvent({
+                        name: 'quickeditform.submit.success',
+                        allFieldsShown: true,
+                        instance: instance
+                    });
+                });
+
+                this.unconfigurableForm.decorated = true;
+            }
+        },
+
+        /**
+         * Whenever we render a view we do these things
+         *
+         * @param {jQuery} contents
+         */
+        applyGlobalDecorator: function (contents) {
+            function focus() {
+                if (instance.currentView.setInitialFocus) {
+                    instance.currentView.setInitialFocus();
+                }
+            }
+
+            var instance = this;
+
+            // If contents is already in the dom when we do the .html call below all events will be unbound. Doing .detach avoids this.
+            contents.detach();
+            this.$element.html(contents);
+            this.triggerEvent("contentRefreshed", [this.$element]);
+
+            // JRADEV-8551 - Changing Issue Type on Create Subtask sends the focus to the page behind the dialog.
+            if (Navigator.isIE()) {
+                window.setTimeout(focus, 0);
+            } else {
+                focus();
+            }
+        },
+
+        /**
+         * Sets up our form to be displayed in a dialog
+         *
+         * @param options
+         * ... {String} id - dialog id
+         * ... {String, jQuery, HTMLelement} - The element that when clicked opens dialog
+         */
+        asDialog: function (options) {
+            options = jQuery.extend(true, {}, options);
+            var instance = this;
+            var dialog;
+            var modeless = !!options.modeless;
+
+            this.dialog = dialog = new FormDialog({
+                id: options.id,
+                trigger: options.trigger,
+                windowTitle: (options.windowTitle !== undefined ? options.windowTitle : !modeless),
+                width: (modeless) ? Dialog.WIDTH_PRESETS.medium : Dialog.WIDTH_PRESETS.large,
+                // line below has been commented while migrating this class to an AMD module; there is no such thing
+                //delayShowUntil: JIRA.Dialogs.waitForSavesToComplete,
+                defineResources: function() {
+                    this.requireContext("jira.create.issue");
+                },
+                content: function (ready) {
+                    instance.render().done(function () {
+                        ready(instance.$element);
+                    });
+
+                    instance.triggerEvent("dialogShown");
+                },
+                submitHandler: function (e, ready) {
+                    e.preventDefault();
+                    instance.currentView.submit().then(ready, ready);
+                },
+                stacked: true,
+                modeless: modeless
+            });
+
+            if (options.id === "edit-issue-dialog") {
+                jQuery(this.dialog).on("beforeShow", function(e) {
+                    //we're not on view issue and no focused issue was found on the issue nav. Do nothing!
+                    if (!Issue.getIssueKey() && !IssueNavigator.isRowSelected()) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            this.dialog._focusFirstField = function() {
+                FormDialog.prototype._focusFirstField.apply(this, ["div.content :input:visible:first"]);
+            };
+
+            // Whenever the forms signal they have finished doing there thing (the user has dismissed them). Close the dialog also.
+            this.bind("initialized", function () {
+                this.unconfigurableForm.bind("sessionComplete", function () {
+                    dialog.hide();
+
+                });
+                this.configurableForm.bind("sessionComplete", function () {
+                    dialog.hide();
+                });
+            })
+                /* Ensure that whenever the user config form updates it's content, for example switching to full form,
+                 Content is decorated (title put in header etc) and dialog is correctly positioned. */
+                .bind("contentRefreshed", function () {
+                    dialog.notifyOfNewContent();
+                });
+
+            dialog.bind("Dialog.hide", function () {
+                if (instance.successData.length) {
+                    instance.triggerEvent("sessionComplete", [instance.successData], true);
+                    instance.successData = [];
+                }
+            });
+
+
+            // Whenever ajax is happening show a loading indicator in the dialog
+            instance.$element.ajaxStart(function () {
+                dialog.showFooterLoadingIndicator();
+            }).ajaxStop(function () {
+                dialog.hideFooterLoadingIndicator();
+            });
+
+            // A way to get to the container instance from the form object
+            dialog.getQuickForm = function () {
+                return instance;
+            };
+
+            // invoke dirty form warning plugin
+            dialog.dirtyFormWarning();
+
+            return dialog;
+        },
+
+        /**
+         * As our options object can be a function we re-evaluate our options whenever this method is called. This is useful
+         * when you are using the same container to build different forms, for example on the issue navigator we want to change
+         * what issue we are editing based on what issue is selected.
+         */
+        lazyInit: function () {
+            var instance = this;
+            var options = this.options.call(this);
+
+            this.model = options.model;
+            this.errorHandler = options.errorHandler;
+            this.globalEventNamespaces = options.globalEventNamespaces;
+            this.configurableForm = options.configurableForm;
+            this.unconfigurableForm = options.unconfigurableForm;
+            this.sessionComplete = options.sessionComplete;
+
+            // clear any fields that are still retained
+            this.model.clearRetainedFields();
+            this.configurableForm.invalidateFieldsCache();
+
+            this.model.bind("serverError", function (e, smartAjaxResult) {
+                instance.$element.html(instance.errorHandler.render(smartAjaxResult));
+                instance.triggerEvent("contentRefreshed", [this.$element]);
+            });
+
+            this.triggerEvent("initialized");
+
+            // Make sure that the content our renderers produce is appended to our container.
+            this.decorateRenderers();
+        },
+
+        /**
+         * Renders quick form. What is actually rendered is based apon user configuration. Full form will be showed first,
+         * but if user switches to configurable form that will be persisted.
+         *
+         * @return jQuery.Deferred
+         */
+        render: function () {
+            var instance = this;
+            var deferred = jQuery.Deferred();
+
+            // re-evaluate options
+            this.lazyInit();
+
+            instance.model.getUseConfigurableForm().done(function (answer) {
+                if (answer === true) {
+                    instance.configurableForm.render().done(function (el, scripts) {
+                        deferred.resolveWith(instance, [instance.$element]);
+                        instance.$element.append(scripts);
+                    });
+                } else {
+                    instance.unconfigurableForm.render().done(function (el, scripts) {
+                        deferred.resolveWith(instance, [instance.$element, scripts]);
+                        instance.$element.append(scripts);
+                    });
+                }
+            }).fail(function () {
+                deferred.resolveWith(instance, [instance.$element]);
+            });
+
+            return deferred.promise();
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.Container
+ */
+AJS.namespace('JIRA.Forms.Container', null, require('quick-edit/form/container'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/error/error.js' */
+/**
+ * @module quick-edit/form/error
+ */
+define('quick-edit/form/error', [
+    'quick-edit/util/control',
+    'quick-edit/templates/form',
+    'jira/ajs/ajax/smart-ajax'
+], function(
+    Control,
+    FormTemplates,
+    SmartAjax
+){
+    'use strict';
+
+    /**
+     * An abstract generic error message renderer
+     *
+     * @class FormError
+     * @extends Control
+     */
+    return Control.extend({
+        /**
+         * Gets the best reason for error it can from a smartAjaxResult
+         *
+         * @param smartAjaxResult
+         * @return String
+         */
+        getErrorMessageFromSmartAjax: function (smartAjaxResult) {
+            var message, data;
+
+            if (smartAjaxResult.hasData && smartAjaxResult.status !== 401) {
+                try {
+                    data = JSON.parse(smartAjaxResult.data);
+                    if (data.errorMessages && data.errorMessages.length > 0) {
+                        message = FormTemplates.errorMessage({
+                            message: data.errorMessages[0]
+                        });
+                    } else {
+                        message = SmartAjax.buildDialogErrorContent(smartAjaxResult, true).html();
+                    }
+                } catch (e) {
+                    message = SmartAjax.buildDialogErrorContent(smartAjaxResult, true).html();
+                }
+            } else {
+                message = SmartAjax.buildDialogErrorContent(smartAjaxResult, true).html();
+            }
+
+            return message;
+        },
+
+        /**
+         * Renders error message
+         *
+         * @param smartAjaxResult
+         */
+        render: function (smartAjaxResult) {
+            var errorMessage = this.getErrorMessageFromSmartAjax(smartAjaxResult);
+            return this._render(errorMessage);
+        }
+    });
+
+});
+
+/**
+ * @deprecated JIRA.Forms.Error
+ */
+AJS.namespace('JIRA.Forms.Error', null, require('quick-edit/form/error'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/error/create-issue.js' */
+/**
+ * @module quick-edit/form/error/create-issue
+ */
+define('quick-edit/form/error/create-issue', [
+    'quick-edit/form/error',
+    'quick-edit/templates/issue',
+    'jquery'
+], function(
+    Error,
+    IssueTemplates,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * Renders an error message with create issue furniture
+     *
+     * @class CreateIssueFormError
+     * @extends FormError
+     */
+    return Error.extend({
+        _render: function (error) {
+            return jQuery(IssueTemplates.createIssueError({
+                errorHtml: error
+            }));
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.CreateIssueError
+ */
+AJS.namespace('JIRA.Forms.CreateIssueError', null, require('quick-edit/form/error/create-issue'));
+
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/error/edit-issue.js' */
+/**
+ * @module quick-edit/form/error/edit-issue
+ */
+define('quick-edit/form/error/edit-issue', [
+    'quick-edit/form/error',
+    'quick-edit/templates/issue',
+    'jquery'
+], function(
+    Error,
+    IssueTemplates,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * Renders an error message with edit issue furniture
+     *
+     * @class EditIssueFormError
+     * @extends FormError
+     */
+    return Error.extend({
+        _render: function (error) {
+            return jQuery(IssueTemplates.editIssueError({
+                errorHtml: error
+            }));
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.EditIssueError
+ */
+AJS.namespace('JIRA.Forms.EditIssueError', null, require('quick-edit/form/error/edit-issue'));
+
+;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/unconfigurable/create-issue.js' */
+/**
+ * @module quick-edit/form/unconfigurable-create-issue
+ */
+define('quick-edit/form/unconfigurable-create-issue', [
+    'quick-edit/form/abstract/unconfigurable',
+    'quick-edit/form/helper/helper',
+    'quick-edit/templates/issue',
+    'quick-edit/util/jira',
+    'jira/util/users/logged-in-user',
+    'wrm/context-path',
+    'jquery'
+], function(
+    AbstractUnconfigurableForm,
+    CreateIssueHelper,
+    IssueTemplates,
+    JiraUtil,
+    User,
+    contextPath,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View that renders the full version of the create issue form. The full version does NOT allow fields to be
+     * configured.
+     *
+     * @class UnconfigurableCreateIssueForm
+     * @extends AbstractUnconfigurableForm
+     */
+    return AbstractUnconfigurableForm.extend({
+        /**
+         * @constructor
+         * @param options
+         * ... {FormModel} model that gets fields and sets user preferences
+         * ... {Array<String>} globalEventNamespaces - Events will be triggered on these namespaces
+         * e.g CreateForm.switchedToConfigurableForm. CreateForm being the specified global namespace.
+         * ... {String, Number} issue id
+         */
+        init: function (options) {
+            this._serialization = {};
+            this.globalEventNamespaces = options.globalEventNamespaces || [];
+            this.model = options.model;
+            this.helper = new CreateIssueHelper(this);
+            this.title = options.title;
+            // Form values will be serialized and POSTed to this url
+            this.action = contextPath() + "/secure/QuickCreateIssue.jspa?decorator=none";
+            // The container element. All html will be injected into this guy.
+            this.$element = jQuery("<div class='qf-unconfigurable-form' />");
+        },
+
+        /**
+         * Directs the browser to the newly created issue
+         *
+         * @param data
+         * ... {String} issueKey
+         */
+        handleSubmitSuccess: function (data) {
+            this.helper.handleSubmitSuccess(data);
+        },
+
+        /**
+         * Renders complete form
+         *
+         * @return jQuery.Deferred
+         */
+        _render: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            this.getFieldsHtml().done(function (fieldsHtml) {
+                instance.model.getIssueSetupFields().done(function (issueSetupFields) {
+                    var html = IssueTemplates.createIssueForm({
+                            issueSetupFields: issueSetupFields,
+                            fieldsHtml: fieldsHtml,
+                            parentIssueId: instance.model.getParentIssueId(),
+                            atlToken: instance.model.getAtlToken(),
+                            formToken: instance.model.getFormToken(),
+                            title: instance.title,
+                            multipleMode: instance.model.isInMultipleMode(),
+                            showFieldConfigurationToolBar: !User.isAnonymous(),
+                            modifierKey: JiraUtil.getModifierKey()
+                        }),
+                        result = JiraUtil.extractScripts(html); // JRADEV-9069 Pull out custom field js to be executed post render
+                    // Look at FormContainer.render for actual execution
+                    instance.$element.empty().append(result.html);
+                    instance.helper.restoreFormDirtyStatus();
+
+                    instance.helper.decorate();
+
+                    instance.helper.decorateFields();
+
+                    deferred.resolveWith(instance, [instance.$element, result.scripts]);
+                });
+
+            });
+
+            return deferred.promise();
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.UnconfigurableCreateIssueForm
+ */
+AJS.namespace('JIRA.Forms.UnconfigurableCreateIssueForm', null, require('quick-edit/form/unconfigurable-create-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/unconfigurable/edit-issue.js' */
+/**
+ * @module quick-edit/form/unconfigurable-edit-issue
+ */
+define('quick-edit/form/unconfigurable-edit-issue', [
+    'quick-edit/form/abstract/unconfigurable',
+    'quick-edit/util/jira',
+    'quick-edit/templates/issue',
+    'jira/util/users/logged-in-user',
+    'wrm/context-path',
+    'jquery'
+], function(
+    AbstractUnconfigurableForm,
+    JiraUtil,
+    IssueTemplates,
+    User,
+    contextPath,
+    jQuery
+){
+    'use strict';
+
+    /**
+     * A View that renders the full version of the edit issue form. The full version does NOT allow fields to be
+     * configured.
+     *
+     * @class UnconfigurableEditIssueForm
+     * @extends AbstractUnconfigurableForm
+     */
+    return AbstractUnconfigurableForm.extend({
+        /**
+         * @constructor
+         * @param options
+         * ... {FormModel} model that gets fields and sets user preferences
+         * ... {Array<String>} globalEventNamespaces - Events will be triggered on these namespaces
+         * e.g EditForm.switchedToConfigurableForm. EditForm being the specified global namespace.
+         * ... {String, Number} issue id
+         */
+        init: function (options) {
+            this.globalEventNamespaces = options.globalEventNamespaces || [];
+            this.model = options.model;
+            this.issueId = options.issueId;
+            this.title = options.title;
+
+            // Form values will be serialized and POSTed to this url
+            this.action = contextPath() + "/secure/QuickEditIssue.jspa?issueId=" + options.issueId + "&decorator=none";
+            // The container element. All html will be injected into this guy.
+            this.$element = jQuery("<div class='qf-unconfigurable-form' />");
+        },
+
+        /**
+         * Gets HTML for fields. This includes tabs and tab panes if applicable.
+         *
+         * @return jQuery.Deferred
+         */
+        getFieldsHtml: function () {
+            var instance = this,
+                deferred = jQuery.Deferred(),
+                data = {};
+
+            this.model.getUnconfigurableTabs().done(function (tabs) {
+                if (tabs.length === 1) {
+                    data.fields = tabs[0].fields;
+
+                } else {
+                    data.tabs = tabs;
+                    data.hasTabs = true;
+                }
+
+                deferred.resolveWith(instance, [IssueTemplates.issueFields(data)]);
+
+            });
+
+            return deferred.promise();
+        },
+
+        /**
+         * Reloads window after form has been successfully submitted
+         */
+        handleSubmitSuccess: function (data) {
+            this.triggerEvent("submitted", [data]);
+            this.triggerEvent("issueEdited", [data], true);
+            this.triggerEvent("sessionComplete");
+        },
+
+        /**
+         * Renders complete form
+         *
+         * @return jQuery.Deferred
+         */
+        _render: function () {
+            var deferred = jQuery.Deferred(),
+                instance = this;
+
+            this.getFieldsHtml().done(function (fieldsHtml) {
+                var renderData = {
+                    fieldsHtml: fieldsHtml,
+                    title: instance.title,
+                    issueId: instance.issueId,
+                    atlToken: instance.model.getAtlToken(),
+                    formToken: instance.model.getFormToken(),
+                    modifierKey: JiraUtil.getModifierKey(),
+                    showFieldConfigurationToolBar: !User.isAnonymous()
+                };
+
+                this.model.getCommentField().then(function (commentField) {
+                    var html, result;
+
+                    renderData.commentField = commentField;
+
+                    html = IssueTemplates.editIssueForm(renderData);
+
+                    // JRADEV-9069 Pull out custom field js to be executed post render
+                    // Look at FormContainer.render for actual execution
+                    result = JiraUtil.extractScripts(html);
+
+                    instance.$element.html(result.html);
+                    deferred.resolveWith(instance, [instance.$element, result.scripts]);
+                }, function () {
+                    var html = IssueTemplates.editIssueForm(renderData),
+                        result = JiraUtil.extractScripts(html);
+                    instance.$element.html(result.html);
+                    deferred.resolveWith(instance, [instance.$element, result.scripts]);
+                });
+            });
+
+            return deferred.promise();
+        }
+    });
+});
+
+/**
+ * @deprecated JIRA.Forms.UnconfigurableEditIssueForm
+ */
+AJS.namespace('JIRA.Forms.UnconfigurableEditIssueForm', null, require('quick-edit/form/unconfigurable-edit-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/factory/create-issue.js' */
+/**
+ * @module quick-edit/form/factory/create-issue
+ */
+define('quick-edit/form/factory/create-issue', [
+    'quick-edit/form/container',
+    'quick-edit/form/configurable/create-issue',
+    'quick-edit/form/unconfigurable-create-issue',
+    'quick-edit/form/error/create-issue',
+    'quick-edit/form/model/create-issue'
+], function(
+    Container,
+    ConfigurableCreateIssueForm,
+    UnconfigurableCreateIssueForm,
+    CreateIssueError,
+    CreateIssueModel
+){
+    'use strict';
+
+    /**
+     * Factory to create Create Issue Form.
+     *
+     * @return FormContainer
+     */
+     return function (options) {
+        options = options || {};
+
+        return new Container(function () {
+            options.globalEventNamespaces = options.globalEventNamespaces || ["QuickCreateIssue"];
+
+            // model that gets fields and sets user preferences
+            var title = "Create Issue",
+                model = new CreateIssueModel({
+                    projectId: options.pid,
+                    issueType: options.issueType
+                }),
+                configurableForm = new ConfigurableCreateIssueForm({
+                    model: model,
+                    title: title,
+                    globalEventNamespaces: options.globalEventNamespaces
+                }),
+                unconfigurableForm = new UnconfigurableCreateIssueForm({
+                    model: model,
+                    title: title,
+                    globalEventNamespaces: options.globalEventNamespaces
+                });
+
+            return {
+                globalEventNamespaces: options.globalEventNamespaces,
+                model: model,
+                errorHandler: new CreateIssueError(),
+                configurableForm: configurableForm,
+                unconfigurableForm: unconfigurableForm
+            };
+        });
+    };
+});
+
+/**
+ * @deprecated JIRA.Forms.createCreateIssueForm
+ */
+AJS.namespace('JIRA.Forms.createCreateIssueForm', null, require('quick-edit/form/factory/create-issue'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/factory/create-subtask.js' */
+/**
+ * @module quick-edit/form/factory/create-subtask
+ */
+define('quick-edit/form/factory/create-subtask', [
+    'quick-edit/form/container',
+    'quick-edit/form/configurable/create-issue',
+    'quick-edit/form/error/create-issue',
+    'quick-edit/form/model/create-issue',
+    'quick-edit/form/unconfigurable-create-issue',
+    'quick-edit/util/dialog',
+    'jira/issue',
+    'jira/issuenavigator/issue-navigator'
+], function(
+    Container,
+    ConfigurableCreateIssueForm,
+    CreateIssueError,
+    CreateIssueModel,
+    UnconfigurableCreateIssueForm,
+    DialogUtil,
+    Issue,
+    IssueNavigator
+){
+    'use strict';
+
+    function getParentIssueId (options) {
+        return options.parentIssueId || Issue.getIssueId() || IssueNavigator.getSelectedIssueId();
+    }
+
+    /**
+     * Factory to create subtask form
+     *
+     * @return FormContainer
+     */
+    return function subtaskForm(options) {
+        options = options || {};
+
+        return new Container(function () {
+            options.globalEventNamespaces = options.globalEventNamespaces || ["QuickCreateSubtask"];
+
+            // model that gets fields and sets user preferences
+            var parentIssueId = getParentIssueId(options),
+                title = DialogUtil.getIssueActionTitle("Create Subtask"),
+                model = new CreateIssueModel({
+                    parentIssueId: parentIssueId,
+                    projectId: options.pid,
+                    issueType: options.issueType
+                }),
+                configurableForm = new ConfigurableCreateIssueForm({
+                    model: model,
+                    title: title,
+                    globalEventNamespaces: options.globalEventNamespaces
+                }),
+                unconfigurableForm = new UnconfigurableCreateIssueForm({
+                    model: model,
+                    title: title,
+                    globalEventNamespaces: options.globalEventNamespaces
+                });
+
+            return {
+                globalEventNamespaces: options.globalEventNamespaces,
+                model: model,
+                errorHandler: new CreateIssueError(),
+                configurableForm: configurableForm,
+                unconfigurableForm: unconfigurableForm
+            };
+        });
+    };
+});
+
+/**
+ * @deprecated JIRA.Forms.createSubtaskForm
+ */
+AJS.namespace('JIRA.Forms.createSubtaskForm', null, require('quick-edit/form/factory/create-subtask'));;
+;
+/* module-key = 'com.atlassian.jira.jira-quick-edit-plugin:quick-form', location = 'js/form/factory/edit-issue.js' */
+/**
+ * @module quick-edit/form/factory/edit-issue
+ */
+define('quick-edit/form/factory/edit-issue', [
+    'quick-edit/form/container',
+    'quick-edit/form/configurable/edit-issue',
+    'quick-edit/form/error/edit-issue',
+    'quick-edit/util/dialog',
+    'quick-edit/form/model/factory/edit-issue',
+    'quick-edit/form/unconfigurable-edit-issue',
+    'jira/issue',
+    'jira/issuenavigator/issue-navigator',
+    'jquery'
+], function(
+    Container,
+    ConfigurableEditIssueForm,
+    EditIssueError,
+    DialogUtil,
+    editIssueFormModelFactory,
+    UnconfigurableEditIssueForm,
+    Issue,
+    IssueNavigator,
+    jQuery
+){
+    'use strict';
+
+    function getSelectedIssueId (options) {
+        var triggerIssueId = DialogUtil.getAttrFromActiveTrigger("data-issueId");
+
+        if (jQuery.isFunction(options.issueId)) {
+            return options.issueId(options);
+        } else if (options.issueId) {
+            return options.issueId;
+        } else if (triggerIssueId) {
+            return triggerIssueId;
+        } else {
+            return Issue.getIssueId() || IssueNavigator.getSelectedIssueId();
+        }
+    }
+
+    // JRADEV-8599 Only Issue Navigator or sub-tasks should have Issue key shown in dialog title
+    function getContainerTitle () {
+        var editActionText = "Edit Issue";
+
+        if (DialogUtil.shouldShowIssueKeyInTitle()) {
+            return DialogUtil.getIssueActionTitle(editActionText);
+        } else {
+            return editActionText;
+        }
+    }
+
+    /**
+     * Factory to create Edit Issue Form
+     *
+     * @param {String, Number} issueId
+     * @return FormContainer
+     */
+    return function (options) {
+        options = options || {};
+
+        return new Container(function () {
+            var issueId = getSelectedIssueId(options),
+                title = getContainerTitle(),
+                model = editIssueFormModelFactory(issueId),
+                configurableForm = new ConfigurableEditIssueForm({
+                    title: title,
+                    model: model,
+                    issueId: issueId,
+                    globalEventNamespaces: ["QuickEdit"]
+                }),
+                unconfigurableForm = new UnconfigurableEditIssueForm({
+                    title: title,
+                    model: model,
+                    issueId: issueId,
+                    globalEventNamespaces: ["QuickEdit"]
+                });
+            return {
+                globalEventNamespaces: ["QuickEdit"],
+                model: model,
+                errorHandler: new EditIssueError(),
+                configurableForm: configurableForm,
+                unconfigurableForm: unconfigurableForm
+            };
+        });
+    };
+});
+
+/**
+ * @deprecated JIRA.Forms.createEditIssueForm
+ */
+AJS.namespace('JIRA.Forms.createEditIssueForm', null, require('quick-edit/form/factory/edit-issue'));;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-create-issue-drop-zone', location = 'js/dropzones/AttachFilesDropZone.js' */
+define('dndattachment/dropzones/AttachFilesDropZone',
+    ['dndattachment/dropzones/FormDropZone', 'jquery'],
+
+function(FormDropZone, $) {
+
+    var AttachFileDropZone = FormDropZone.extend({
+
+        eventGroup: 'attachfiledropzone',
+
+        init: function() {
+            this._super.apply(this, arguments);
+
+            // this will mark drop zone as dirty as long as all progress are not removed
+            // no matter if uploading is finished or not
+            this.bind('progressBarInserted', function(event, progressBar) {
+                var uploadPending = new $.Deferred();
+                this.queueTask(uploadPending);
+                progressBar.result.done(uploadPending.resolve.bind(uploadPending));
+                progressBar.bind('onBeforeDestroy', function() {
+                    uploadPending.resolve();
+                });
+            }.bind(this));
+        },
+
+        checkMarkDirty: function() {
+            // all tasks are done, succesful or not
+            if(this.pendingQueue.length <= 1)
+                this.markDirty(false);
+        }
+    });
+
+    return AttachFileDropZone;
+});;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-create-issue-drop-zone', location = 'js/dropzones/CreateIssueDropZone.js' */
+define('dndattachment/dropzones/CreateIssueDropZone',
+    ['jquery',
+     'dndattachment/dropzones/FormDropZone',
+     'dndattachment/progressbars/UploadProgressBar'],
+
+    function($, FormDropZone, UploadProgressBar) {
+
+        var CreateIssueDropZone = FormDropZone.extend({
+
+            eventGroup: 'createissuedropzone',
+
+            progressBarType: 'dndattachment/progressbars/ProjectUploadProgressBar',
+
+            getContainerNode: function() {
+                return $(this.$node.parents('.jira-dialog-content')[0] ||
+                    this.$node.parents('form#issue-create').parents('.aui-page-panel-content')[0])
+            },
+
+            handleNewProgressBar: function (progressBar) {
+                this._super.apply(this, arguments);
+                progressBar.bind('onDestroy onFinished', _.bind(function() {
+                    // Each time a progress bar is removed/finishes uploading, check if there are any more are uploading.
+                    // If not, then remove any form errors (the only form errors are from files uploading).
+                    if (!this.filesStillUploading()) {
+                        var errors = {};
+                        errors[this.$inputNode.attr("name")] = "";
+                        JIRA.applyErrorsToForm(this.$formNode, errors);
+                    }
+                }, this));
+            }
+        });
+
+        return CreateIssueDropZone;
+    });;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-create-issue-drop-zone', location = 'js/progressbars/ProjectUploadProgressBar.js' */
+define('dndattachment/progressbars/ProjectUploadProgressBar', [
+    'jquery',
+    'dndattachment/progressbars/UploadProgressBar'
+], function(
+    $,
+    UploadProgressBar
+) {
+    return UploadProgressBar.extend({
+        getProjectId: function() {
+            return this.$node.parents('form').find('*[name=pid]').val();
+        },
+
+        getUploadParams: function(file) {
+            var uploadParams = UploadProgressBar.prototype.getUploadParams.apply(this, arguments);
+
+            if(this.getProjectId()) {
+                uploadParams.projectId = this.getProjectId();
+            }
+
+            return uploadParams;
+        },
+
+        loadThumbnail: function(file) {
+
+            if (this.unifiedAttachmentsM2FeatureEnabled() && !this.isImageType()) {
+                var $thumbnailNode = this.getThumbnailNode();
+                $thumbnailNode
+                    .removeClass('upload-progress-bar__thumbnail_image')
+                    .addClass('upload-progress-bar__thumbnail_icon')
+                    .addClass('upload-progress-bar__thumbnail_icon_aui');
+
+                // Determine which icon and what alt title to set depending on attachment's mime type
+                var typeIconCss = 'aui-iconfont-devtools-file';
+                var typeIconTitle = 'File';
+                if (typeof file === 'object') {
+                    typeIconCss = JIRA.Templates.ViewIssue.matchFileClass( { mimetype : file.type } );
+                    typeIconTitle = JIRA.Templates.ViewIssue.matchFileIconAlt( { mimetype : file.type } );
+                }
+
+                var $thumbnail = $('<span class="aui-icon aui-icon-large"/>')
+                    .addClass(typeIconCss)
+                    .attr('title', typeIconTitle);
+
+                return $thumbnail.appendTo($thumbnailNode);
+
+            } else {
+                return this._super.apply(this, arguments);
+            }
+
+
+        }
+    });
+});;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-create-issue-drop-zone', location = 'templates/AttachFilesDropZone.soy' */
+// This file was automatically generated from AttachFilesDropZone.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace JIRA.Templates.DnDAttachmentPlugin.
+ */
+
+if (typeof JIRA == 'undefined') { var JIRA = {}; }
+if (typeof JIRA.Templates == 'undefined') { JIRA.Templates = {}; }
+if (typeof JIRA.Templates.DnDAttachmentPlugin == 'undefined') { JIRA.Templates.DnDAttachmentPlugin = {}; }
+
+
+JIRA.Templates.DnDAttachmentPlugin.AttachFilesDropZone = function(opt_data, opt_ignored) {
+  return '<div duiType="dndattachment/dropzones/AttachFilesDropZone" class="issue-drop-zone" data-upload-limit="' + soy.$$escapeHtml(opt_data.jiraAttachmentSize) + '" data-upload-size="' + soy.$$escapeHtml(opt_data.uploadLimit) + '"></div>';
+};
+if (goog.DEBUG) {
+  JIRA.Templates.DnDAttachmentPlugin.AttachFilesDropZone.soyTemplateName = 'JIRA.Templates.DnDAttachmentPlugin.AttachFilesDropZone';
+}
+;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-dnd-attachment-plugin:dnd-create-issue-drop-zone', location = 'templates/CreateIssueDropZone.soy' */
+// This file was automatically generated from CreateIssueDropZone.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace JIRA.Templates.DnDAttachmentPlugin.
+ */
+
+if (typeof JIRA == 'undefined') { var JIRA = {}; }
+if (typeof JIRA.Templates == 'undefined') { JIRA.Templates = {}; }
+if (typeof JIRA.Templates.DnDAttachmentPlugin == 'undefined') { JIRA.Templates.DnDAttachmentPlugin = {}; }
+
+
+JIRA.Templates.DnDAttachmentPlugin.CreateIssueDropZone = function(opt_data, opt_ignored) {
+  return '<div duiType="dndattachment/dropzones/CreateIssueDropZone" class="issue-drop-zone" data-upload-limit="' + soy.$$escapeHtml(opt_data.jiraAttachmentSize) + '" data-upload-size="' + soy.$$escapeHtml(opt_data.uploadLimit) + '"></div>' + ((opt_data.description) ? '<div class="description">' + soy.$$escapeHtml(opt_data.description) + '</div>' : '');
+};
+if (goog.DEBUG) {
+  JIRA.Templates.DnDAttachmentPlugin.CreateIssueDropZone.soyTemplateName = 'JIRA.Templates.DnDAttachmentPlugin.CreateIssueDropZone';
+}
+;

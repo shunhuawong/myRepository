@@ -1,0 +1,23 @@
+start clean
+    ./jmake cleanall && ./jmake run
+
+setup JIRA against embedded database
+
+Install this license jira-func-tests/src/main/resources/license/developer-software-servicedesk.lic
+user admin/admin
+
+shut it down
+    ./jmake run shutdown
+
+export to SQL e.g.
+    java -cp ~/.m2/repository/com/h2database/h2/1.4.185/h2-1.4.185.jar org.h2.tools.Script -url "jdbc:h2:file:./jirahome/database/h2db" -user sa -script jira-components/jira-plugins/jira-plugin-test-resources/src/main/resources/jira-home/database/h2db.sql
+
+in h2db.sql: replace your home e.g.
+    /Users/acourtis/src/jira7-h2/jirahome
+with
+    .
+
+in h2db.sql: change the HTTP port e.g.
+    localhost:8090
+with
+    localhost:2990

@@ -1,0 +1,30 @@
+@import "../../../ui/imports/colours";
+
+#view-voter-list,
+#view-watcher-list {
+    text-decoration: none;
+}
+
+#inline-dialog-watchers {
+    width: 240px;
+    .recipients {
+        overflow-y: auto;
+        max-height: 200px;
+    }
+}
+
+aui-inline-dialog2.aui-inline-dialog .aui-inline-dialog-contents {
+    padding: 0;
+}
+//workaround for nps plugin because we override aui-inline-dialog-contents padding (above)
+#nps-survey-inline-dialog .aui-inline-dialog-contents{
+  padding: 20px;
+}
+
+.aui-badge {
+    &.vote-state-on,
+    &.watch-state-on {
+        background-color: @jira-dropdown-menuitem-background-focus-color;
+        color: @jira-dropdown-menuitem-text-focus-color;
+    }
+}

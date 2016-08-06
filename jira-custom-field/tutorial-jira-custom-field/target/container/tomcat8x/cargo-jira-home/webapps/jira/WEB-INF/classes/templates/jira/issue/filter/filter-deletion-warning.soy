@@ -1,0 +1,54 @@
+{namespace JIRA.Templates.Issues.Filters.Warnings}
+
+/**
+ * Template to display warning when deleted filter has one or more subscriptions against it.
+ *
+ * @param subscriptionCount Number of subscriptions the filter has against it.
+ * @param subscriptionPageUrl The URL to the list of subscriptions
+ */
+{template .subscriptionWarning}
+    {if $subscriptionCount > 0}
+        {let $anchorOpen}
+            <a href="{contextPath() + $subscriptionPageUrl}">
+        {/let}
+
+        <p data-subscription-count="{$subscriptionCount}">
+            {getText('deletefilter.view.subscriptions.warning', $subscriptionCount, $anchorOpen, '</a>')|noAutoescape}
+        </p>
+    {/if}
+{/template}
+
+/**
+ * Template to display warning when deleted filter has one or more favourites against it.
+ *
+ * @param favouriteCount Number of favourites the filter has against it.
+ */
+{template .favouriteWarning}
+    {if $favouriteCount > 0}
+        <p data-favourite-count="{$favouriteCount}">
+            {getText('deletefilter.other.favourite.filter.warning', $favouriteCount)}
+        </p>
+    {/if}
+{/template}
+
+
+/**
+ * Template to display body of the warning dialog.
+ *
+ * @param warningMessages
+ */
+{template .dialogBody}
+    <div id="filter-deletion-warning">
+        {if length($warningMessages) > 0}
+            <p class="title-warning">{getText('deletefilter.confirm.warning')}</p>
+        {else}
+            <p class="title">{getText('deletefilter.confirm')}</p>
+        {/if}
+
+        <ul class="warning-messages">
+            {foreach $warningMessage in $warningMessages}
+                <li class="warning-message">{$warningMessage|noAutoescape}</li>
+            {/foreach}
+        </ul>
+     </div>
+{/template}

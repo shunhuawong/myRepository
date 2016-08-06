@@ -1,0 +1,24 @@
+{namespace JIRA.Project.Types.Warning}
+
+/**
+ * @param title
+ * @param firstParagraph
+ * @param secondParagraph
+ * @param callToActionText
+ */
+{template .dialog}
+    <div class="project-type-warning-dialog">
+        <p class="header">
+            <span>{$title}</span>
+        </p>
+        <p class="type-not-accessible-message">
+            {$firstParagraph}
+        </p>
+        <p class="available-functionality-message">
+            {$secondParagraph}
+        </p>
+        <div class="actions">
+            <a class="warning-dialog-change-project-type" href="#">{$callToActionText}</a>
+        </div>
+    </div>
+{/template}

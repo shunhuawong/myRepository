@@ -1,0 +1,1303 @@
+;
+/* module-key = 'com.atlassian.plugins.helptips.jira-help-tips:common', location = 'js/HelpTip.js' */
+(function($) {
+    function nope() { return false; }
+    function yep() { return true; }
+
+    var HELP_TIP_CLASSNAMES = 'jira-help-tip aui-help';
+
+    var cidCounter = 0, seed = new Date().getTime();
+
+    // to un-fuck graphite event names
+    function cleanAnalyticsName(name) {
+        name = "" + (name || "");
+        return name.replace(/\./g, "-");
+    }
+
+    function analytics(eventId, model) {
+        if (AJS.EventQueue && model && model.attributes.id) {
+            var event = {};
+            var cleanId = cleanAnalyticsName(model.attributes.id);
+            var eventPrefix = "";
+
+            if (model.attributes.eventPrefix) {
+                eventPrefix = model.attributes.eventPrefix;
+                // Ensure a dot at the end of the event prefix
+                if (eventPrefix.charAt(eventPrefix.length - 1) !== ".") {
+                    eventPrefix += ".";
+                }
+            }
+
+            event.name = eventPrefix + "helptips." + cleanId + "." + eventId;
+            event.properties = {};
+            AJS.EventQueue.push(event);
+        }
+    }
+
+    function getCid() {
+        return "jira-help-tip-" + seed + (cidCounter++);
+    }
+
+    /**
+     * @param attributes
+     * @param attributes.id
+     * @param attributes.callbacks callbacks used by helptip and passed into AJS.InlineDialog
+     * @param attributes.callbacks.beforeShow {jQuery.Deferred() | Function} called before rendering the helptip
+     * @param attributes.callbacks.init {Function} passed into AJS.InlineDialog as initCallback param
+     * @param attributes.callbacks.hide {Function} passed into AJS.InlineDialog as hideCallback param
+     * @param attributes.isSequence {Boolean} to indicate whether this helptip should be shown in sequence
+     *        see https://developer.atlassian.com/design/latest/feature-discovery.html
+     * @param attributes.weight {Integer} the weight of the helptip determining the order to be shown in sequence
+     * @param attributes.body {String} the HTML body content of the helptip
+     * @param attributes.bodyHtml {String} same as attributes.body
+     * @param attributes.inlineDialogOpts {Map} passed into AJS.InlineDialog as options, This will replace all the defaults specified by HelpTip
+     * @param attributes.eventPrefix {String} The prefix to use for all analytics events
+     * @param attributes.nextButtonText {String} The text to be displayed on the 'next' button
+     * @param attributes.closeButtonText {String} The text to be displayed on the 'close' button
+     * @param attributes.showCloseButton {Boolean} Whether the 'close' button should be displayed on the helptip
+     *
+     * @type {Function}
+     */
+    var HelpTip = AJS.HelpTip = function(attributes) {
+        var anchor;
+        this.attributes = $.extend({}, attributes);
+        this.attributes.id || (this.attributes.id = false);
+        this.attributes.callbacks || (this.attributes.callbacks = {});
+
+        //Allows the helptip to be shown in sequence via next button
+        if (this.attributes.isSequence) {
+            if(!this.attributes.weight) {
+                this.attributes.weight = Number.MAX_VALUE;
+            }
+            AJS.HelpTip.Manager.sequences.push(this);
+        }
+
+        // Map renamed attribute body to bodyHtml
+        if (this.attributes.body) {
+            this.attributes.bodyHtml = this.attributes.body;
+            delete this.attributes.body;
+        }
+        this.cid = getCid();
+        anchor = this.attributes['anchor'];
+        delete this.attributes['anchor'];
+
+        this.view = (anchor) ? new AnchoredView(this, anchor) : new UnanchoredView(this);
+    };
+
+    $.extend(HelpTip.prototype, {
+        /**
+         * @param options.force render the helptip regardless of the display controller
+         */
+        show: function(options) {
+            options = options || {};
+
+            var self = this;
+            var showDeferred = $.Deferred();
+            if (this.attributes.callbacks.beforeShow) {
+                var beforeShowDeferred = this.attributes.callbacks.beforeShow();
+                if (beforeShowDeferred && _.isFunction(beforeShowDeferred.done)) {
+                    beforeShowDeferred.done(showDeferred.resolve)
+                } else {
+                    showDeferred.resolve();
+                }
+            } else {
+                showDeferred.resolve();
+            }
+
+            showDeferred.done(function() {
+                AJS.HelpTip.Manager.show(function() {
+                    if (!self.isDismissed()) {
+                        if (!options.force && AJS.Popups && AJS.Popups.DisplayController) {
+                            AJS.Popups.DisplayController.request({
+                                name:self.id,
+                                weight:1000,
+                                show:function () {
+                                    self.view.show();
+                                }})
+                        } else {
+                            self.view.show();
+                        }
+                        analytics("shown", self);
+                    }
+                });
+            });
+        },
+        dismiss: function() {
+            var reason = cleanAnalyticsName(arguments[0] || "programmatically");
+            this.view.dismiss();
+            //Clicking close should stop other helptip in sequence from showing
+            if (reason === "close-button" && this.attributes.isSequence) {
+                AJS.HelpTip.Manager.clearSequences();
+            }
+            if (!this.isDismissed()) {
+                AJS.HelpTip.Manager.dismiss(this);
+                analytics("dismissed." + reason, this);
+            }
+        },
+        isVisible: function() {
+            return this.view.$el.is(":visible");
+        },
+        isDismissed: function() {
+            return AJS.HelpTip.Manager.isDismissed(this);
+        },
+
+        /**
+         * Redraws the help tip.
+         *  - If a selector was passed as the anchor, it will check if the actual element has changed and reanchor
+         *    if necessary
+         *  - If the anchor is not visible, it will hide the help tip
+         *  - If the anchor has moved, it will re-position the help tip
+         */
+        refresh: function() {
+            if (!this.isDismissed()) {
+                this.view.refresh();
+            }
+        },
+
+        /**
+         * Hide the help tip without dismissing it
+         */
+        hide: function() {
+            if (!this.isDismissed()) {
+                this.view.dismiss();
+            }
+        },
+
+        /**
+         * Advance to the next help tip if this help tip
+         * is part of a sequence and is not the last help
+         * tip in the sequence. Useful in the situation where
+         * user can progress by performing some action in addition to
+         * clicking the next button.
+         */
+        showNextHelpTipInSequence: function() {
+            this.view.clickNext();
+        }
+    });
+
+    var AnchoredView = function(model, anchor) {
+        this.initialize(model, anchor);
+    };
+
+    $.extend(AnchoredView.prototype, {
+        initialize: function(model, anchor) {
+            this.model = model;
+            this.anchorSelector = anchor;
+            this.anchor = AJS.$(anchor);
+            this._initDialog(anchor);
+            AJS.$(document).bind("showLayer",function(e,type,layer) {
+                if (type === "inlineDialog" && layer.id === model.cid) {
+                    AJS.InlineDialog.current = null; // Tips shouldn't be considered InlineDialogs.
+                    AJS.$(document.body).unbind("click."+model.cid+".inline-dialog-check");
+                    layer._validateClickToClose = nope;
+                    layer.hide = nope;
+                }
+            });
+        },
+        show: function() {
+            this.beforeHide = nope;
+            this.popup.show();
+        },
+        refresh: function() {
+            var maybeNewAnchor = AJS.$(this.anchorSelector);
+            if (!maybeNewAnchor.is(':visible')) {
+                this.dismiss(); // hide
+            } else if (maybeNewAnchor.get(0) !== this.anchor.get(0)) {
+                this.changeAnchor(maybeNewAnchor);
+            } else if (!this.isVisible()) {
+                this.show();
+            } else {
+                this.popup.refresh();
+            }
+        },
+        changeAnchor: function(anchor) {
+            var wasVisible = this.isVisible();
+            this.dismiss();
+            this.$el.remove();
+            this.anchor = anchor;
+            this._initDialog(anchor);
+            if (wasVisible) {
+                this.show();
+            }
+        },
+        dismiss: function() {
+            this.beforeHide = yep;
+            this._popupHide();
+        },
+        clickNext: function() {
+            var nextButton = AJS.$(this.$el).find(".helptip-next");
+            if (nextButton.length > 0) {
+                nextButton.click();
+            }
+        },
+        isVisible: function() {
+            return this.$el.is(':visible');
+        },
+        _initDialog: function(anchor) {
+            var self = this;
+            var model = this.model;
+            this.popup = AJS.InlineDialog($(anchor), model.cid, _.bind(this._createDialog, this), _.extend({
+                // Use a container other than body, so that the positioning works when there are client-rendered banner messages
+                container: "#content",
+                noBind: true,
+                preHideCallback: function() { return self.beforeHide() },
+                calculatePositions: function(popup, targetPosition, mousePosition, opts) {
+                    // Adjust positions relative to the container
+                    var cssData = AJS.InlineDialog.opts.calculatePositions(popup, targetPosition, mousePosition, opts);
+                    var $container = $(this.container);
+                    var offset = $container.offset();
+                    if (cssData.popupCss.left !== 'auto') {
+                        cssData.popupCss.left -= offset.left;
+                        // Inline dialog has a bug where in some scenarios both left and right pos of the popup is set.
+                        cssData.popupCss.right = 'auto';
+                    }
+                    cssData.popupCss.top -= offset.top;
+                    return cssData;
+                },
+                addActiveClass: false,
+                initCallback: model.attributes.callbacks.init,
+                hideCallback: model.attributes.callbacks.hide,
+                persistent: true
+            }, model.attributes.inlineDialogOpts));
+            this._popupHide = this.popup.hide;
+            this.popup.hide = nope;
+            this.$el = $(this.popup[0]);
+            this.$el.addClass(HELP_TIP_CLASSNAMES);
+        },
+        _createDialog: function(content, trigger, show) {
+            var instance = this;
+            var sequenceDialogs = AJS.HelpTip.Manager.sequences;
+            var position = this.model.attributes.position;
+            var isSequence = this.model.attributes.isSequence;
+
+            content.removeClass('contents');
+
+            content.html($(AJS.Templates.HelpTip.tipContent(_.extend({
+                showNextButton: isSequence && (sequenceDialogs.length > 1 && (position+1 < sequenceDialogs.length)),
+                length: sequenceDialogs.length,
+                position: position,
+                showCloseButton: true
+            }, this.model.attributes))));
+
+            content.unbind('mouseover mouseout');
+            content.find(".helptip-link").click(function() {
+                analytics("learn-more.clicked", instance.model);
+            });
+            content.find(".helptip-close").click(function(e) {
+                e.preventDefault();
+                instance.model.dismiss("close-button");
+            });
+            content.find(".helptip-next").click(function(e) {
+                e.preventDefault();
+                instance.model.dismiss("next-button");
+                var next = position + 1;
+                sequenceDialogs[next] && (sequenceDialogs[next].show({force: true}));
+            });
+            show();
+        }
+    });
+
+    var UnanchoredView = function(model) {
+        this.initialize(model);
+    };
+
+    $.extend(UnanchoredView.prototype, {
+        initialize: function() {
+            this.$el = $("<div></div>");
+            this.$el.addClass(HELP_TIP_CLASSNAMES);
+        },
+        show: function() { },
+        dismiss: function() { }
+    });
+})(AJS.$);
+;
+;
+/* module-key = 'com.atlassian.plugins.helptips.jira-help-tips:common', location = 'js/HelpTipManager.js' */
+(function($) {
+    var restUrl = AJS.contextPath() + "/rest/helptips/1.0/tips";
+    var tipWRMData = undefined;
+    if (WRM && WRM.data) {
+        tipWRMData = WRM.data.claim("com.atlassian.plugins.helptips.jira-help-tips:common.JiraHelpTipData");
+    }
+
+    var Manager = {
+        dismissedTipIds: [],
+        sequences: [],
+        loaded: $.Deferred(),
+        url: function() { return restUrl; },
+        sync: function(verb, data) {
+            var result = $.Deferred();
+            verb || (verb = "get");
+            data || (data = null);
+            if (verb === "get" && tipWRMData && tipWRMData.dismissed) {
+                result.resolve(tipWRMData.dismissed);
+            } else {
+                $.ajax(this.url(), {
+                    type: verb,
+                    dataType: "json",
+                    contentType: "application/json",
+                    data: data && JSON.stringify(data),
+                    processData: false
+                })
+                    .done(function(data) {
+                        result.resolve(data);
+                    })
+                    .fail(function() {
+                        result.reject();
+                    });
+            }
+            return result.promise();
+        },
+        fetch: function() {
+            var result = this.sync();
+            result.done($.proxy(function(response) {
+                $.merge(this.dismissedTipIds, response);
+                this.loaded.resolve();
+            }, this));
+            return result.promise();
+        },
+        show: function(showFunction) {
+            this.loaded.done(showFunction);
+        },
+        dismiss: function(tip) {
+            var id = tip.attributes.id;
+            if (!id) {
+                tip._dismissed = true;
+            } else {
+                this.dismissedTipIds.push(id);
+                this.sync("post", {id:id});
+            }
+        },
+        undismiss: function(tip) {
+            var id = tip.attributes.id;
+            if (!id) {
+                tip._dismissed = false;
+            } else {
+                this.dismissedTipIds.splice($.inArray(id, this.dismissedTipIds), 1);
+                this.sync("delete", {id:id});
+            }
+        },
+        isDismissed: function(tip) {
+            var id = tip.attributes.id;
+            return (id) ? $.inArray(id, this.dismissedTipIds) >= 0 : tip._dismissed;
+        },
+        /**
+         * Clear the list of helptips that would be shown in sequence
+         */
+        clearSequences: function() {
+            this.sequences = [];
+        },
+        /**
+         * Hide all the helptips that would be shown in sequence
+         */
+        hideSequences: function() {
+            _.each(this.sequences, function(helptip) {
+                helptip.view.dismiss();
+            });
+        },
+        /**
+         * Initiate the rendering of helptips in sequence starting from the first one
+         */
+        showSequences: function() {
+            if (!this._showStarted) {
+                var instance = this;
+                var index = 0;
+                this._showStarted = true;
+                $.when(this.loaded).done(function() {
+                    //Sort by weight
+                    instance.sequences.sort(function(a, b) {
+                        return a.attributes.weight - b.attributes.weight;
+                    });
+                    //Remove any helptips that have already been dismissed
+                    instance.sequences = _.filter(instance.sequences, function(dialog) {
+                        var shouldShow = _.indexOf(instance.dismissedTipIds, dialog.attributes.id) === -1;
+                        if (shouldShow) {
+                            dialog.attributes.position = index++;
+                        }
+                        return shouldShow;
+                    });
+                    if (instance.sequences.length > 0) {
+                        //SW-1740: Ensure the last tip part of a sequence always shows the close button. Filtering out already dismissed
+                        // tips above may have changed the original last tip.
+                        _.last(instance.sequences).attributes.showCloseButton = true;
+
+                        instance.sequences[0].show({force: true});
+                    }
+                    instance._showStarted = false;
+                });
+            }
+        }
+    };
+
+    // Check if the user is logged in, otherwise the REST resource will return a status of 401 (Unauthorized)
+    if (!JIRA.Users.LoggedInUser.isAnonymous()) {
+        AJS.HelpTip.Manager = Manager;
+        // Load up the user's dismissed tips.
+        Manager.fetch();
+    }
+})(AJS.$);;
+;
+/* module-key = 'com.atlassian.plugins.helptips.jira-help-tips:common', location = 'templates/HelpTip.soy' */
+// This file was automatically generated from HelpTip.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace AJS.Templates.HelpTip.
+ */
+
+if (typeof AJS == 'undefined') { var AJS = {}; }
+if (typeof AJS.Templates == 'undefined') { AJS.Templates = {}; }
+if (typeof AJS.Templates.HelpTip == 'undefined') { AJS.Templates.HelpTip = {}; }
+
+
+AJS.Templates.HelpTip.tipContent = function(opt_data, opt_ignored) {
+  return ((opt_data.title) ? '<h2 class="helptip-title">' + soy.$$escapeHtml(opt_data.title) + '</h2>' : '') + '<p class="helptip-body">' + soy.$$filterNoAutoescape(opt_data.bodyHtml) + '</p>' + ((opt_data.url) ? '<p><a class="helptip-link" href="' + soy.$$escapeHtml(opt_data.url) + '" target="_blank">' + ((opt_data.linkText) ? soy.$$escapeHtml(opt_data.linkText) : soy.$$escapeHtml("Learn more")) + '</a></p>' : '') + AJS.Templates.HelpTip.tipFooter(opt_data);
+};
+if (goog.DEBUG) {
+  AJS.Templates.HelpTip.tipContent.soyTemplateName = 'AJS.Templates.HelpTip.tipContent';
+}
+
+
+AJS.Templates.HelpTip.tipFooter = function(opt_data, opt_ignored) {
+  return '<form class="tip-footer">' + AJS.Templates.HelpTip.nextButton(opt_data) + AJS.Templates.HelpTip.closeButton(opt_data) + AJS.Templates.HelpTip.sequencePaging(opt_data) + '</form>';
+};
+if (goog.DEBUG) {
+  AJS.Templates.HelpTip.tipFooter.soyTemplateName = 'AJS.Templates.HelpTip.tipFooter';
+}
+
+
+AJS.Templates.HelpTip.nextButton = function(opt_data, opt_ignored) {
+  return '' + ((opt_data.showNextButton) ? '<button class="aui-button helptip-next" type="button">' + ((opt_data.nextButtonText) ? soy.$$escapeHtml(opt_data.nextButtonText) : soy.$$escapeHtml("Next")) + '</button>' : '');
+};
+if (goog.DEBUG) {
+  AJS.Templates.HelpTip.nextButton.soyTemplateName = 'AJS.Templates.HelpTip.nextButton';
+}
+
+
+AJS.Templates.HelpTip.closeButton = function(opt_data, opt_ignored) {
+  return '' + ((opt_data.showCloseButton) ? '<button class="aui-button ' + ((opt_data.showNextButton) ? ' aui-button-link ' : '') + ' helptip-close" type="button">' + ((opt_data.closeButtonText) ? soy.$$escapeHtml(opt_data.closeButtonText) : soy.$$escapeHtml("Close")) + '</button>' : '');
+};
+if (goog.DEBUG) {
+  AJS.Templates.HelpTip.closeButton.soyTemplateName = 'AJS.Templates.HelpTip.closeButton';
+}
+
+
+AJS.Templates.HelpTip.sequencePaging = function(opt_data, opt_ignored) {
+  return '' + ((opt_data.isSequence && opt_data.length > 1) ? '<span class="helptip-sequence-paging">' + soy.$$escapeHtml(opt_data.position + 1) + '/' + soy.$$escapeHtml(opt_data.length) + '</span>' : '');
+};
+if (goog.DEBUG) {
+  AJS.Templates.HelpTip.sequencePaging.soyTemplateName = 'AJS.Templates.HelpTip.sequencePaging';
+}
+;
+;
+/* module-key = 'com.atlassian.plugins.atlassian-nav-links-plugin:rotp-menu', location = 'appswitcher/appswitcher.soy' */
+// This file was automatically generated from appswitcher.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace navlinks.templates.appswitcher.
+ */
+
+if (typeof navlinks == 'undefined') { var navlinks = {}; }
+if (typeof navlinks.templates == 'undefined') { navlinks.templates = {}; }
+if (typeof navlinks.templates.appswitcher == 'undefined') { navlinks.templates.appswitcher = {}; }
+
+
+navlinks.templates.appswitcher.linkSection = function(opt_data, opt_ignored) {
+  var output = '';
+  if (opt_data.list.length > 0) {
+    output += '<div class="aui-nav-heading sidebar-section-header">' + soy.$$escapeHtml(opt_data.title) + '</div><ul class="aui-nav nav-links">';
+    var linkList8 = opt_data.list;
+    var linkListLen8 = linkList8.length;
+    for (var linkIndex8 = 0; linkIndex8 < linkListLen8; linkIndex8++) {
+      var linkData8 = linkList8[linkIndex8];
+      output += navlinks.templates.appswitcher.applicationsItem(linkData8);
+    }
+    output += '</ul>';
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.linkSection.soyTemplateName = 'navlinks.templates.appswitcher.linkSection';
+}
+
+
+navlinks.templates.appswitcher.applicationsItem = function(opt_data, opt_ignored) {
+  return '<li class="nav-link"><a href="' + soy.$$escapeHtml(opt_data.link) + '" ' + ((opt_data.self) ? 'class="checked"' : '') + ' title="' + soy.$$escapeHtml(opt_data.link) + '"><span class="nav-link-label">' + soy.$$escapeHtml(opt_data.label) + '</span></a></li>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.applicationsItem.soyTemplateName = 'navlinks.templates.appswitcher.applicationsItem';
+}
+
+
+navlinks.templates.appswitcher.shortcutsItem = function(opt_data, opt_ignored) {
+  return '<li class="nav-link"><a href="' + soy.$$escapeHtml(opt_data.link) + '" ' + ((opt_data.self) ? 'class="checked"' : '') + ' title="' + soy.$$escapeHtml(opt_data.link) + '"><span class="nav-link-label">' + soy.$$escapeHtml(opt_data.label) + '</span>' + ((opt_data.showDescription && opt_data.description) ? '<span class="nav-link-description">' + soy.$$escapeHtml(opt_data.description) + '</span>' : '') + '</a></li>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.shortcutsItem.soyTemplateName = 'navlinks.templates.appswitcher.shortcutsItem';
+}
+
+
+navlinks.templates.appswitcher.error = function(opt_data, opt_ignored) {
+  return '<div class="app-switcher-error">' + soy.$$filterNoAutoescape("Something went wrong, please \x3cspan class\x3d\x22app-switcher-retry\x22\x3etry again\x3c/span\x3e.") + '</div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.error.soyTemplateName = 'navlinks.templates.appswitcher.error';
+}
+
+
+navlinks.templates.appswitcher.sidebarContents = function(opt_data, opt_ignored) {
+  return '<div class="aui-page-panel-nav"><nav class="aui-navgroup aui-navgroup-vertical"><div class="app-switcher-section app-switcher-applications"><div class="aui-nav-heading">' + soy.$$escapeHtml("Application Links") + '</div><div class="app-switcher-loading">' + soy.$$filterNoAutoescape("Loading\x26hellip;") + '</div></div><div class="app-switcher-section app-switcher-shortcuts"><div class="aui-nav-heading">' + soy.$$escapeHtml("Shortcuts") + '</div><div class="app-switcher-loading">' + soy.$$filterNoAutoescape("Loading\x26hellip;") + '</div></div></nav></div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.sidebarContents.soyTemplateName = 'navlinks.templates.appswitcher.sidebarContents';
+}
+
+
+navlinks.templates.appswitcher.trigger = function(opt_data, opt_ignored) {
+  return '<span class="aui-icon aui-icon-small aui-iconfont-appswitcher">' + soy.$$escapeHtml("Linked Applications") + '</span>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.trigger.soyTemplateName = 'navlinks.templates.appswitcher.trigger';
+}
+
+
+navlinks.templates.appswitcher.projectHeaderSection = function(opt_data, opt_ignored) {
+  return '<div class="app-switcher-title">' + aui.avatar.avatar({size: 'large', avatarImageUrl: opt_data.avatarUrl, isProject: true, title: opt_data.name}) + '<div class="sidebar-project-name">' + soy.$$escapeHtml(opt_data.name) + '</div></div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.projectHeaderSection.soyTemplateName = 'navlinks.templates.appswitcher.projectHeaderSection';
+}
+
+
+navlinks.templates.appswitcher.cogDropdown = function(opt_data, opt_ignored) {
+  var output = '';
+  var dropdownList__soy74 = '' + navlinks.templates.appswitcher.dropdownList({list: opt_data.links});
+  output += aui.dropdown2.dropdown2({menu: {id: opt_data.id, content: dropdownList__soy74, extraClasses: 'aui-style-default sidebar-customize-section'}, trigger: {showIcon: false, content: '<span class="aui-icon aui-icon-small aui-iconfont-configure"></span>', container: '#app-switcher'}});
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.cogDropdown.soyTemplateName = 'navlinks.templates.appswitcher.cogDropdown';
+}
+
+
+navlinks.templates.appswitcher.dropdownList = function(opt_data, opt_ignored) {
+  var output = '<ul class="sidebar-admin-links">';
+  var linkList82 = opt_data.list;
+  var linkListLen82 = linkList82.length;
+  for (var linkIndex82 = 0; linkIndex82 < linkListLen82; linkIndex82++) {
+    var linkData82 = linkList82[linkIndex82];
+    output += '<li class="nav-link"><a href="' + soy.$$escapeHtml(linkData82.href) + '" title="' + soy.$$escapeHtml(linkData82.title) + '"><span class="nav-link-label">' + soy.$$escapeHtml(linkData82.label) + '</span></a></li>';
+  }
+  output += '</ul>';
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.dropdownList.soyTemplateName = 'navlinks.templates.appswitcher.dropdownList';
+}
+
+
+navlinks.templates.appswitcher.switcher = function(opt_data, opt_ignored) {
+  var output = '';
+  if (true) {
+    if (AJS.DarkFeatures.isEnabled('rotp.sidebar')) {
+      var sidebarContents__soy97 = '' + navlinks.templates.appswitcher.sidebarContents(null);
+      var triggerContent__soy99 = '' + navlinks.templates.appswitcher.trigger(null);
+      output += navlinks.templates.appswitcher.sidebar({sidebar: {id: 'app-switcher', content: sidebarContents__soy97}, trigger: {showIcon: false, content: triggerContent__soy99}}) + '<script>\n                (function (NL) {\n                    var initialise = function () {\n                        new NL.SideBar({\n                            sidebarContents: \'#app-switcher\'\n                        });\n                    };\n                    if (NL.SideBar) {\n                        initialise();\n                    } else {\n                        NL.onInit = initialise;\n                    }\n                }(window.NL = (window.NL || {})));\n                window.NL.isUserAdmin = ' + soy.$$escapeHtml(false) + '<\/script>';
+    } else {
+      output += navlinks.templates.appswitcher_old.switcher(null);
+    }
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.switcher.soyTemplateName = 'navlinks.templates.appswitcher.switcher';
+}
+
+
+navlinks.templates.appswitcher.sidebar = function(opt_data, opt_ignored) {
+  return '<a href="' + soy.$$escapeHtml(opt_data.sidebar.id) + '" class="sidebar-trigger app-switcher-trigger" aria-owns="' + soy.$$escapeHtml(opt_data.sidebar.id) + '" aria-haspopup="true">' + soy.$$filterNoAutoescape(opt_data.trigger.content) + '</a><div id=' + soy.$$escapeHtml(opt_data.sidebar.id) + ' class="app-switcher-sidebar aui-style-default sidebar-offscreen">' + soy.$$filterNoAutoescape(opt_data.sidebar.content) + '</div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher.sidebar.soyTemplateName = 'navlinks.templates.appswitcher.sidebar';
+}
+;
+;
+/* module-key = 'com.atlassian.plugins.atlassian-nav-links-plugin:rotp-menu', location = 'appswitcher/appswitcher.js' */
+(function ($, NL) {
+    NL.SideBar = function (options) {
+        var that = this;
+        this.$sidebar = null;
+
+        options = $.extend({
+            sidebarContents: null
+        }, options);
+
+        this.getLinks = function () {
+            return $.ajax({
+                url: AJS.contextPath() + '/rest/menu/latest/appswitcher',
+                cache: false,
+                dataType: 'json'
+            }).done(this.updateAppLinks).fail(this.showAppSwitcherError);
+        };
+
+        this.populateProjectHeader = function(name, avatarUrl) {
+            that.getSidebar().find('.app-switcher-shortcuts .aui-nav-heading').after(navlinks.templates.appswitcher.projectHeaderSection({
+                avatarUrl: avatarUrl,
+                name: name
+            }));
+        };
+
+        this.getProjectData = function(){
+            var $projectData = $('.project-shortcut-dialog-trigger'),
+                projectKey = $projectData.data('key'),
+                projectEntityType = $projectData.data('entity-type');
+            // if we have no project data, we are not in a project context, so delete the shortcuts section and return.
+            if ($projectData.size() == 0 || !projectKey || !projectEntityType)
+            {
+                $('.app-switcher-shortcuts').remove();
+                return;
+            }
+
+            var remote, local;
+
+            local = $.ajax({
+                url: AJS.contextPath() + '/rest/project-shortcuts/1.0/local/' + projectKey,
+                cache: false,
+                data: { entityType: projectEntityType },
+                dataType: 'json'
+            });
+
+            remote = $.ajax({
+                url: AJS.contextPath() + '/rest/project-shortcuts/1.0/remote/' + projectKey,
+                cache: false,
+                data: { entityType: projectEntityType },
+                dataType: 'json'
+            });
+
+            // wrap a closure around updateProjectShortcuts so we can bind projectKey
+            $.when(local, remote).then(function(localData, remoteData){
+                that.updateProjectShortcuts(localData, remoteData, {
+                    key: projectKey,
+                    entityType: projectEntityType,
+                    name: $projectData.data('name'),
+                    avatarUrl: $projectData.find('img').prop('src')
+                });
+            }, that.showProjectShortcutsError);
+        }
+
+        this.getSidebar = function () {
+            if (!this.$sidebar) {
+                this.$sidebar = $(options.sidebarContents);
+            }
+            return this.$sidebar;
+        };
+
+        this.addApplicationsCog = function ()
+        {
+            $('.app-switcher-applications .aui-nav-heading').before(navlinks.templates.appswitcher.cogDropdown({
+                id: 'sidebar-applications-admin-dropdown',
+                links: [{
+                    href: AJS.contextPath() + '/plugins/servlet/customize-application-navigator',
+                    label: "Customize navigator",
+                    title: "Add new entries, hide existing or restrict who sees what"
+                }, {
+                    href: AJS.contextPath() + '/plugins/servlet/applinks/listApplicationLinks',
+                    label: "Manage application links",
+                    title: "Link to more Atlassian applications"
+                }]
+            }));
+        };
+
+        this.addProjectShortcutsCog = function (projectKey, entityType)
+        {
+            var links = [{
+                href: AJS.contextPath() + '/plugins/servlet/custom-content-links-admin?entityKey=' + projectKey,
+                label: "Customize shortcuts",
+                title: ""
+            }];
+
+            if (that.entityMappings[entityType]) {
+                links.push({
+                    href: that.generateEntityLinksUrl(projectKey, that.entityMappings[entityType]),
+                    label: "Manage product links",
+                    title: ""
+                });
+            }
+
+            that.getSidebar().find('.app-switcher-shortcuts .aui-nav-heading').before(navlinks.templates.appswitcher.cogDropdown({
+                id: 'sidebar-project-shortcuts-admin-dropdown',
+                links: links
+            }));
+        };
+
+        this.updateAppLinks = function (data) {
+            $(function () {
+                that.getSidebar().find('.app-switcher-applications').html(navlinks.templates.appswitcher.linkSection({
+                    title: "Application Links",
+                    list: data
+                }));
+
+                if(NL.isUserAdmin)
+                {
+                    that.addApplicationsCog();
+                }
+
+                that.bindAnalyticsHandlers(that.getSidebar(), data);
+            });
+        };
+
+        this.updateProjectShortcuts = function (localData, remoteData, projectData) {
+            var localLinks = localData[0].shortcuts,
+                remoteLinks = remoteData[0].shortcuts
+
+            that.getSidebar().find('.app-switcher-shortcuts').html(navlinks.templates.appswitcher.linkSection({
+                title: "Shortcuts",
+                list: localLinks.concat(remoteLinks)
+            }));
+
+            // if we're an admin, put some project admin links in too
+            if(NL.isUserAdmin)
+            {
+                that.addProjectShortcutsCog(projectData.key, projectData.entityType);
+            }
+
+            that.populateProjectHeader(projectData.name, projectData.avatarUrl);
+
+            that.bindAnalyticsHandlers(that.getSidebar(), data);
+        };
+
+        // Warning: ick.
+        this.entityMappings = {
+            'confluence.space': 'com.atlassian.applinks.api.application.confluence.ConfluenceSpaceEntityType',
+            'jira.project': 'com.atlassian.applinks.api.application.jira.JiraProjectEntityType',
+            'bamboo.project': 'com.atlassian.applinks.api.application.bamboo.BambooProjectEntityType',
+            'stash.project': 'com.atlassian.applinks.api.application.stash.StashProjectEntityType'
+        }
+        this.generateEntityLinksUrl = function(projectKey, entityType) {
+            // special case for confluence which has a much nicer entity links page
+            if (entityType === that.entityMappings['confluence.space']) {
+                return AJS.contextPath() + '/spaces/listentitylinks.action?typeId=' + entityType + '&key=' + projectKey;
+            } else {
+                return AJS.contextPath() + '/plugins/servlet/applinks/listEntityLinks/' + entityType + '/' + projectKey;
+            }
+        }
+
+        this.showAppSwitcherError = function () {
+            $(function () {
+                var $sidebar = that.getSidebar();
+                $sidebar.find('.app-switcher-applications .app-switcher-loading')
+                        .replaceWith(navlinks.templates.appswitcher.error())
+                $sidebar.off('.appswitcher')
+                        .on('click.appswitcher', '.app-switcher-retry', $.proxy(that.retryLoading, that));
+            });
+        };
+
+        this.showProjectShortcutsError = function () {
+            $(function () {
+                var $sidebar = that.getSidebar();
+                $sidebar.find('.app-switcher-shortcuts .app-switcher-loading')
+                    .replaceWith(navlinks.templates.appswitcher.error());
+                $sidebar.off('.appswitcher')
+                    .on('click.appswitcher', '.app-switcher-retry', $.proxy(that.retryLoading, that));
+            });
+        };
+
+        this.retryLoading = function (e) {
+            this.getSidebar().html(navlinks.templates.appswitcher.sidebarContents());
+            this.getLinks();
+            this.getProjectData();
+            e && e.stopPropagation();
+        };
+
+        this.bindAnalyticsHandlers = function ($sidebar, apps) {
+            // TODO: reconsider what we want to capture
+        };
+
+        this.getLinks();
+        $(this.getProjectData);
+
+        this.toggleSidebar = function(event){
+            var sidebar = that.getSidebar(),
+                body = $('body'), document = $(window.document);
+
+            if (!body.hasClass('app-switcher-open')) {
+                var header = $('#header');
+
+                //append the sidebar to the body if this is the first toggle call.
+                sidebar.css('left', -sidebar.width());
+                sidebar.parent('body').length || sidebar.appendTo('body');
+                sidebarStalk({data: sidebar});
+                //Animation can be kicked off now that things are in position
+                sidebar.animate({'left': 0}, 300);
+
+                function closeSidebar(closeEvent){
+                    var target = closeEvent.target && $(closeEvent.target),
+                        keyCode = closeEvent.keyCode;
+
+                    //shortcut out if this is the same even which bound the event to begin with
+                    if( closeEvent.originalEvent === event.originalEvent ) {
+                        return;
+                    }
+
+                    if (target && !keyCode && !(target.closest(sidebar).length || target.closest(header).length)
+                            && event.which == 1 && !(closeEvent.shiftKey || closeEvent.ctrlKey || closeEvent.metaKey)){
+                        //event is a click outside of the toolbar or header
+                        that.toggleSidebar();
+                    } else if (keyCode === 27) {
+                        //event is the escape key
+                        that.toggleSidebar();
+                    }
+                }
+                document.on('click.appSwitcher', closeSidebar);
+                document.on('keydown.appSwitcher', closeSidebar);
+                document.on('scroll.appSwitcher', sidebar, sidebarStalk);
+            } else {
+                document.off('.appSwitcher');
+            }
+            body.toggleClass('app-switcher-open');
+        }
+
+        $('#header').on('click', '.app-switcher-trigger', this.toggleSidebar);
+    };
+
+    function sidebarStalk(event){
+        var scrollPosition = $(document).scrollTop(),
+            header = $('#header'),
+            topOffset = (header.height() + header.offset().top) - scrollPosition;
+
+        if ( topOffset >= 0 ) {
+            event.data.css({top: topOffset, position: 'fixed'});
+        } else {
+            event.data.css({top: 0, left: 0, position: 'fixed'});
+        }
+    }
+
+    if (NL.onInit) {
+        NL.onInit();
+    }
+}(jQuery, window.NL = (window.NL || {})));
+;
+;
+/* module-key = 'com.atlassian.plugins.atlassian-nav-links-plugin:rotp-menu', location = 'appswitcher/appswitcher_old.js' */
+var APPSWITCHER_TRIGGER_CLICK = "appswitcher.trigger.click";
+var APPSWITCHER_DROPDOWN_SHOW = "appswitcher.dropdown.show";
+var APPSWITCHER_DROPDOWN_DISPLAY_ERROR = "appswitcher.dropdown.display.error";
+var APPSWITCHER_APP_LINK_CLICK = "appswitcher.app.link.click";
+var APPSWITCHER_CONFIGURE_LINK_CLICK = "appswitcher.configure.link.click";
+
+(function ($, NL) {
+    NL.AppSwitcher = function (options) {
+        var ADMIN_EDIT_PATH = AJS.contextPath() + "/plugins/servlet/customize-application-navigator";
+        var GLOBAL_BILLING_SYSTEM_DARK_FEATURE_KEY = "unified.usermanagement";
+        var that = this;
+        this.$dropdown = null;
+
+        options = $.extend({
+            dropdownContents: null
+        }, options);
+
+        this.getLinks = function () {
+            return $.ajax({
+                url: AJS.contextPath() + '/rest/menu/latest/appswitcher',
+                cache: false,
+                dataType: 'json'
+            }).done(this.updateDropdown).fail(this.showError);
+        };
+
+        this.getDropdown = function () {
+            if (!this.$dropdown) {
+                this.$dropdown = $(options.dropdownContents);
+            }
+            return this.$dropdown;
+        };
+
+        this.updateDropdown = function (data) {
+            $(function () {
+                that.getDropdown().html(navlinks.templates.appswitcher_old.applications({
+                    apps: data,
+                    showAdminLink: NL.environment.isUserAdmin,
+                    adminLink: ADMIN_EDIT_PATH
+                }));
+
+                that.bindAnalyticsHandlers();
+                if (NL.environment.isAppSuggestionAvailable === true) {
+                    that.handleSuggestionApps(data);
+                }
+            });
+        };
+
+        this.bindAnalyticsHandlers = function () {
+            $(".app-switcher-trigger").on("click", function() {
+                AJS.trigger("analyticsEvent", {name: APPSWITCHER_TRIGGER_CLICK});
+            });
+
+            $("#app-switcher").on("aui-dropdown2-show", function() {
+                AJS.trigger("analyticsEvent", {name: APPSWITCHER_DROPDOWN_SHOW});
+            });
+
+            $('#app-switcher .nav-link').on('click', function() {
+                var product = "custom";
+                var productLink = $(this).find("a");
+                var url = productLink.attr("href");
+                var hostname = window.location.hostname;
+
+                if (url.indexOf(hostname + "/wiki") > -1) {
+                    product = "confluence";
+                } else if (url.indexOf(hostname + "/build") > -1) {
+                    product = "bamboo";
+                } else if (url.indexOf(hostname) > -1) {
+                    product = "jira";
+                }
+
+                AJS.trigger("analyticsEvent", {
+                    name: APPSWITCHER_APP_LINK_CLICK,
+                    data: { product: product }
+                });
+            });
+
+            $('.nav-link-edit-wrapper').on('click', function() {
+                AJS.trigger("analyticsEvent", {name: APPSWITCHER_CONFIGURE_LINK_CLICK});
+            })
+        };
+
+        this.isBillingSystemEnabled = function() {
+            return (NL.environment.isSiteAdminUser === true) && AJS.DarkFeatures.isEnabled(GLOBAL_BILLING_SYSTEM_DARK_FEATURE_KEY);
+        };
+
+        this.handleSuggestionApps = function(data) {
+
+            var installedApps = _.map(data, function (app) {
+                return app.applicationType.toLowerCase();
+            });
+
+            var $suggestionApps = $("<div id='app-switcher-suggestion-apps' class='aui-dropdown2-section'/>");
+            $suggestionApps.html(navlinks.templates.appswitcher_old.suggestionApps);
+
+            var apps = $suggestionApps.find('.suggestion-apps');
+            var hasSuggestionApps = false;
+            _.each(suggestions, function(value) {
+                if (!_.contains(installedApps, value.appName)) {
+                    hasSuggestionApps = true;
+                    apps.append(navlinks.templates.appswitcher_old.suggestionApp({
+                        suggestionApp: value,
+                        isBillingSystemEnabled:  that.isBillingSystemEnabled()
+                    }));
+                }
+            });
+
+            if (!hasSuggestionApps) return;
+
+            $("#app-switcher").append($suggestionApps);
+
+            $('.app-discovery-suggestion-app').click(function () {
+                var $suggestionAppLink = $(this).find("a");
+                var eventName;
+                if (NL.environment.isSiteAdminUser) {
+                    eventName = 'appswitcher.discovery.siteadmin.select.inproduct.';
+                } else {
+                    eventName = 'appswitcher.discovery.user.select.';
+                }
+                eventName = eventName + $suggestionAppLink.attr("id").toLowerCase();
+                AJS.trigger("analytics", {name: eventName});
+            });
+
+            $('.app-discovery-suggestion-app').hover(function () {
+                $(this).find("a").removeClass("active").removeClass("aui-dropdown2-active");
+            });
+
+            $('.app-discovery-cancel-button').click(function () {
+                AJS.trigger("analytics", {name: "appswitcher.discovery.nothanks.button.click"});
+                storeUserStorageData(KEY_NO_THANKS, "true");
+                $suggestionApps.remove();
+            });
+        };
+
+        this.showError = function () {
+            $(function () {
+                AJS.trigger("analyticsEvent", {name: APPSWITCHER_DROPDOWN_DISPLAY_ERROR});
+                that.getDropdown()
+                    .html(navlinks.templates.appswitcher_old.error())
+                    .off('.appswitcher')
+                    .on('click.appswitcher', '.app-switcher-retry', $.proxy(that.retryLoading, that));
+            });
+        };
+
+        this.retryLoading = function (e) {
+            this.getDropdown().html(navlinks.templates.appswitcher_old.loading());
+            this.getLinks();
+            e && e.stopPropagation();
+        };
+
+        this.getLinks();
+    };
+
+    var KEY_NO_THANKS = "key-no-thanks";
+    var suggestions = [
+        {
+            appName: "jira",
+            appDesc: "Issue & Project Tracking Software",
+            discoveryUrl: 'https://www.atlassian.com/software/jira',
+            billingSystemDiscoveryUrl: '/admin/billing/addapplication'
+        },
+        {
+            appName: "confluence",
+            appDesc: "Collaboration and content sharing",
+            discoveryUrl: 'https://www.atlassian.com/software/confluence',
+            billingSystemDiscoveryUrl: '/admin/billing/addapplication?product=confluence.ondemand'
+        },
+        {
+            appName: "bamboo",
+            appDesc: "Continuous integration",
+            discoveryUrl: 'https://www.atlassian.com/software/bamboo',
+            billingSystemDiscoveryUrl: '/admin/billing/addapplication?product=bamboo.ondemand'
+        }];
+
+    var storeUserStorageData = function (key, value) {
+        $.ajax({
+            url: AJS.contextPath() + '/rest/menu/latest/userdata/',
+            type: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify({
+                key: key,
+                value:value
+            })
+        });
+    };
+
+    if (NL.onInit) {
+        NL.onInit();
+    }
+
+
+}(jQuery, window.NL = (window.NL || {})));;
+;
+/* module-key = 'com.atlassian.plugins.atlassian-nav-links-plugin:rotp-menu', location = 'appswitcher/appswitcher_old.soy' */
+// This file was automatically generated from appswitcher_old.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace navlinks.templates.appswitcher_old.
+ */
+
+if (typeof navlinks == 'undefined') { var navlinks = {}; }
+if (typeof navlinks.templates == 'undefined') { navlinks.templates = {}; }
+if (typeof navlinks.templates.appswitcher_old == 'undefined') { navlinks.templates.appswitcher_old = {}; }
+
+
+navlinks.templates.appswitcher_old.applications = function(opt_data, opt_ignored) {
+  return '' + navlinks.templates.appswitcher_old.applicationsSection({list: opt_data.apps, listClass: 'nav-links', showDescription: opt_data.showDescription}) + ((opt_data.custom) ? navlinks.templates.appswitcher_old.applicationsSection({list: opt_data.custom, showDescription: opt_data.showDescription}) : '') + ((opt_data.showAdminLink) ? navlinks.templates.appswitcher_old.adminSection(opt_data) : '');
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.applications.soyTemplateName = 'navlinks.templates.appswitcher_old.applications';
+}
+
+
+navlinks.templates.appswitcher_old.applicationsSection = function(opt_data, opt_ignored) {
+  var output = '';
+  if (opt_data.list.length > 0) {
+    var param19 = '<ul' + ((opt_data.listClass) ? ' class="' + soy.$$escapeHtml(opt_data.listClass) + '"' : '') + '>';
+    var linkList27 = opt_data.list;
+    var linkListLen27 = linkList27.length;
+    for (var linkIndex27 = 0; linkIndex27 < linkListLen27; linkIndex27++) {
+      var linkData27 = linkList27[linkIndex27];
+      param19 += navlinks.templates.appswitcher_old.applicationsItem(soy.$$augmentMap(linkData27, {showDescription: opt_data.showDescription}));
+    }
+    param19 += '</ul>';
+    output += aui.dropdown2.section({content: param19});
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.applicationsSection.soyTemplateName = 'navlinks.templates.appswitcher_old.applicationsSection';
+}
+
+
+navlinks.templates.appswitcher_old.applicationsItem = function(opt_data, opt_ignored) {
+  return '<li class="nav-link' + ((opt_data.self) ? ' nav-link-local' : '') + '"><a href="' + soy.$$escapeHtml(opt_data.link) + '" class="aui-dropdown2-radio ' + ((opt_data.self) ? 'aui-dropdown2-checked' : '') + '" title="' + soy.$$escapeHtml(opt_data.link) + '"><span class="nav-link-label">' + soy.$$escapeHtml(opt_data.label) + '</span>' + ((opt_data.showDescription && opt_data.description) ? '<span class="nav-link-description">' + soy.$$escapeHtml(opt_data.description) + '</span>' : '') + '</a></li>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.applicationsItem.soyTemplateName = 'navlinks.templates.appswitcher_old.applicationsItem';
+}
+
+
+navlinks.templates.appswitcher_old.adminSection = function(opt_data, opt_ignored) {
+  return '' + aui.dropdown2.section({content: '<ul class="nav-links"><li><a class="nav-link-edit-wrapper" href="' + soy.$$escapeHtml(opt_data.adminLink) + '"><span class="nav-link-edit">' + soy.$$filterNoAutoescape("Configure\x26hellip;") + '</span></a></li></ul>'});
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.adminSection.soyTemplateName = 'navlinks.templates.appswitcher_old.adminSection';
+}
+
+
+navlinks.templates.appswitcher_old.error = function(opt_data, opt_ignored) {
+  return '<div class="app-switcher-error">' + soy.$$filterNoAutoescape("Something went wrong, please \x3cspan class\x3d\x22app-switcher-retry\x22\x3etry again\x3c/span\x3e.") + '</div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.error.soyTemplateName = 'navlinks.templates.appswitcher_old.error';
+}
+
+
+navlinks.templates.appswitcher_old.loading = function(opt_data, opt_ignored) {
+  return '<div class="app-switcher-loading">' + soy.$$filterNoAutoescape("Loading\x26hellip;") + '</div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.loading.soyTemplateName = 'navlinks.templates.appswitcher_old.loading';
+}
+
+
+navlinks.templates.appswitcher_old.trigger = function(opt_data, opt_ignored) {
+  return '<span class="aui-icon aui-icon-small aui-iconfont-appswitcher">' + soy.$$escapeHtml("Linked Applications") + '</span>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.trigger.soyTemplateName = 'navlinks.templates.appswitcher_old.trigger';
+}
+
+
+navlinks.templates.appswitcher_old.switcher = function(opt_data, opt_ignored) {
+  var output = '';
+  if (true) {
+    var loadingContent__soy81 = '' + navlinks.templates.appswitcher_old.loading(null);
+    var triggerContent__soy83 = '' + navlinks.templates.appswitcher_old.trigger(null);
+    output += aui.dropdown2.dropdown2({menu: {id: 'app-switcher', content: loadingContent__soy81, extraClasses: 'aui-style-default'}, trigger: {showIcon: false, content: triggerContent__soy83, extraClasses: 'app-switcher-trigger', extraAttributes: {href: '#app-switcher'}}}) + '<script>\n            (function (NL) {\n                var initialise = function () {\n                    // For some milestones of AUI, the atlassian soy namespace was renamed to aui. Handle that here by ensuring that window.atlassian is defined.\n                    window.atlassian = window.atlassian || window.aui;\n                    new NL.AppSwitcher({\n                        dropdownContents: \'#app-switcher\'\n                    });\n                };\n                if (NL.AppSwitcher) {\n                    initialise();\n                } else {\n                    NL.onInit = initialise;\n                }\n            }(window.NL = (window.NL || {})));\n            window.NL.environment = ' + soy.$$escapeHtml({}) + ';<\/script>';
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.switcher.soyTemplateName = 'navlinks.templates.appswitcher_old.switcher';
+}
+
+
+navlinks.templates.appswitcher_old.suggestionApp = function(opt_data, opt_ignored) {
+  var output = '';
+  var href__soy92 = opt_data.isBillingSystemEnabled == true ? opt_data.suggestionApp.billingSystemDiscoveryUrl : opt_data.suggestionApp.discoveryUrl;
+  output += '<li class="app-discovery-suggestion-app"><a id="' + soy.$$escapeHtml(opt_data.suggestionApp.appName) + '" href="' + soy.$$escapeHtml(href__soy92) + '" class="app-discovery-link aui-icon-container app-discovery-' + soy.$$escapeHtml(opt_data.suggestionApp.appName) + '-product-icon" title="' + soy.$$escapeHtml(href__soy92) + '" target="_blank"/><div class="app-discovery-small">' + soy.$$escapeHtml(opt_data.suggestionApp.appDesc) + '</div></li>';
+  return output;
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.suggestionApp.soyTemplateName = 'navlinks.templates.appswitcher_old.suggestionApp';
+}
+
+
+navlinks.templates.appswitcher_old.suggestionApps = function(opt_data, opt_ignored) {
+  return '<ul class=\'nav-links suggestion-apps\'><li><span class=\'app-discovery-suggest-title nav-link-label\'><h6>' + soy.$$escapeHtml("Try other Atlassian apps") + '</h6></span></li></ul><div class=\'buttons-container app-discovery-suggest-apps-buttons\'><div class=\'buttons\'><button class=\'aui-button aui-button-link app-discovery-cancel-button\' name=\'cancel\' accesskey=\'c\' href=\'#\'>' + soy.$$escapeHtml("Don\x27t show this again") + '</button></div></div>';
+};
+if (goog.DEBUG) {
+  navlinks.templates.appswitcher_old.suggestionApps.soyTemplateName = 'navlinks.templates.appswitcher_old.suggestionApps';
+}
+;
+;
+/* module-key = 'com.atlassian.jira.jira-header-plugin:jira-header', location = 'soy/headerDropdown.soy' */
+// This file was automatically generated from headerDropdown.soy.
+// Please don't edit this file by hand.
+
+/**
+ * @fileoverview Templates in namespace JIRA.Templates.Menu.Dropdowns.
+ */
+
+if (typeof JIRA == 'undefined') { var JIRA = {}; }
+if (typeof JIRA.Templates == 'undefined') { JIRA.Templates = {}; }
+if (typeof JIRA.Templates.Menu == 'undefined') { JIRA.Templates.Menu = {}; }
+if (typeof JIRA.Templates.Menu.Dropdowns == 'undefined') { JIRA.Templates.Menu.Dropdowns = {}; }
+
+
+JIRA.Templates.Menu.Dropdowns.dropdown2Fragment = function(opt_data, opt_ignored) {
+  var output = '';
+  var sectionList3 = opt_data.sections;
+  var sectionListLen3 = sectionList3.length;
+  for (var sectionIndex3 = 0; sectionIndex3 < sectionListLen3; sectionIndex3++) {
+    var sectionData3 = sectionList3[sectionIndex3];
+    var hasItems__soy4 = sectionData3.items && sectionData3.items.length > 0;
+    output += '<div class="aui-dropdown2-section">' + ((hasItems__soy4 && sectionData3.label) ? '<strong>' + soy.$$escapeHtml(sectionData3.label) + '</strong>' : '') + '<ul class=\'aui-list-truncate\'' + ((sectionData3.id) ? ' id="' + soy.$$escapeHtml(sectionData3.id) + '"' : '') + ((sectionData3.style) ? ' class="' + soy.$$escapeHtml(sectionData3.style) + '"' : '') + '>';
+    if (hasItems__soy4) {
+      var itemList25 = sectionData3.items;
+      var itemListLen25 = itemList25.length;
+      for (var itemIndex25 = 0; itemIndex25 < itemListLen25; itemIndex25++) {
+        var itemData25 = itemList25[itemIndex25];
+        output += JIRA.Templates.Menu.Dropdowns.dropdown2Item(itemData25);
+      }
+    }
+    output += '</ul></div>';
+  }
+  return output;
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Menu.Dropdowns.dropdown2Fragment.soyTemplateName = 'JIRA.Templates.Menu.Dropdowns.dropdown2Fragment';
+}
+
+
+JIRA.Templates.Menu.Dropdowns.dropdown2Item = function(opt_data, opt_ignored) {
+  var output = '<li' + ((opt_data.id) ? ' id="' + soy.$$escapeHtml(opt_data.id) + '"' : '') + ((opt_data.style) ? ' class="' + soy.$$escapeHtml(opt_data.style) + '"' : '') + '><a href="' + soy.$$escapeHtml(opt_data.url) + '"' + ((opt_data.id) ? ' id="' + soy.$$escapeHtml(opt_data.id) + '_lnk"' : '') + ((opt_data.title) ? ' title="' + soy.$$escapeHtml(opt_data.title) + '"' : '') + ' class="' + ((opt_data.iconUrl) ? 'aui-icon-container' : '') + ((opt_data.parameters && opt_data.parameters['class']) ? ' ' + soy.$$escapeHtml(opt_data.parameters['class']) : '') + '"';
+  if (opt_data.parameters) {
+    var keyList66 = soy.$$getMapKeys(opt_data.parameters);
+    var keyListLen66 = keyList66.length;
+    for (var keyIndex66 = 0; keyIndex66 < keyListLen66; keyIndex66++) {
+      var keyData66 = keyList66[keyIndex66];
+      output += (keyData66 != 'class') ? ' ' + soy.$$escapeHtml(keyData66) + '="' + soy.$$escapeHtml(opt_data.parameters[keyData66]) + '"' : '';
+    }
+  }
+  output += '>' + ((opt_data.iconUrl) ? '<img class="icon" src="' + soy.$$escapeHtml(opt_data.iconUrl) + '" />' : '') + soy.$$escapeHtml(opt_data.label) + '</a></li>';
+  return output;
+};
+if (goog.DEBUG) {
+  JIRA.Templates.Menu.Dropdowns.dropdown2Item.soyTemplateName = 'JIRA.Templates.Menu.Dropdowns.dropdown2Item';
+}
+;
+;
+/* module-key = 'com.atlassian.jira.jira-header-plugin:jira-header', location = 'js/init-dropdown2.js' */
+/**
+ * JIRA's implementation of AUI Dropdown2 remote API (https://extranet.atlassian.com/display/AUI/Dropdown2+remote+API).
+ *
+ * This predates AUI Dropdown2, and allows the application header menus to be dynamic and populated via AJAX. This is
+ * required for menus that are dynamic (e.g. Issues or Projects).
+ *
+ * In addition to the normal `aui-dropdown2-show` event that is triggered on the dropdown, two extra events are
+ * triggered to expose the asynchronous nature of the menus:
+ *
+ * - `aui-dropdown2-show-before` is triggered _before_ a dropdown is shown (due to implementation details, this is
+ *    unfortunately triggered after `aui-dropdown2-show`).
+ * - `aui-dropdown2-show-after` is triggered when the dropdown is populated and visible to the user. It is triggered for
+ *    both remote dropdowns and normal dropdowns.
+ *
+ * The class `aui-dropdown2-loading` is added to the dropdown between `aui-dropdown2-show-before` and
+ * `aui-dropdown2-show-after`.
+ */
+require(['jira/ajs/ajax/smart-ajax', 'jquery'], function (SmartAjax, $) {
+    $(function () {
+        $("nav.aui-header a.aui-dropdown2-trigger").each(function() {
+            var $trigger = $(this);
+            var $dropdown = $("#" + $trigger.attr("aria-owns"));
+            var ajaxKey = $dropdown.data("aui-dropdown2-ajax-key");
+
+            $dropdown.bind("aui-dropdown2-show", function (event, options) {
+                $dropdown.trigger('aui-dropdown2-show-before');
+
+                if (ajaxKey) {
+                    // JIRA's own implementation of Dropdown2 remote API. This predates Dropdown2 remote, and should be
+                    // removed when Dropdown2 remote API lands in AUI.
+                    $dropdown.empty();
+                    $dropdown.addClass("aui-dropdown2-loading");
+                    SmartAjax.makeRequest({
+                        url: AJS.contextPath() + "/rest/api/1.0/menus/" + ajaxKey,
+                        data: {
+                            inAdminMode: AJS.Meta.getBoolean("in-admin-mode")
+                        },
+                        dataType: "json",
+                        cache: false,
+                        success: function (data) {
+                            $dropdown.removeClass("aui-dropdown2-loading");
+                            $dropdown.html(JIRA.Templates.Menu.Dropdowns.dropdown2Fragment(data));
+
+                            if (options && options.selectFirst) {
+                                $dropdown.find("a:not(.disabled)").filter(":first").addClass("active");
+                            }
+                            $dropdown.trigger('aui-dropdown2-show-after');
+                        }
+                    });
+                } else {
+                    $dropdown.trigger('aui-dropdown2-show-after');
+                }
+            });
+        });
+    });
+});
+;

@@ -1,0 +1,25 @@
+;
+/* module-key = 'com.atlassian.jirawallboard.atlassian-wallboard-plugin:configure-wallboard-dialog-resources', location = 'script/configDialog.js' */
+var AJS = AJS || {};
+AJS.WALLBOARD = AJS.WALLBOARD || {};
+
+(function() {
+    AJS.$(this).one("load", function () {
+        //JIRA 4.3 renamed AJS.FormPopup to JIRA.FormDialog
+        if(JIRA.FormDialog) {
+            new JIRA.FormDialog({
+                id: "configure_wallboard_dialog",
+                trigger: "#configure_wallboard"
+            });
+        } else {
+            new AJS.FormPopup({
+                id: "configure_wallboard_dialog",
+                trigger: "#configure_wallboard"
+            });
+        }
+
+        // set the dialog trigger to the actual dialog, rather than '#'
+        AJS.$("#configure_wallboard").attr('href', contextPath + '/ConfigureWallboard!default.jspa');
+
+    });
+})();;

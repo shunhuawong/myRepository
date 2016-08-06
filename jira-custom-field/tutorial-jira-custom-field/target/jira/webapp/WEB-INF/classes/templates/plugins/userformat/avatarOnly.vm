@@ -1,0 +1,14 @@
+#disable_html_escaping()
+#* @vtlvariable name="avatarURL" type="java.lang.String" *#
+#* @vtlvariable name="avatarSize" type="java.lang.String" *#
+#if (!$avatarSize || $avatarSize.empty())
+    #set ($avatarSize = "xsmall")
+#end
+#if ($avatarURL && !$avatarURL.empty())
+    $soyRenderer.render("com.atlassian.auiplugin:aui-experimental-soy-templates","aui.avatar.avatar", {
+    "avatarImageUrl": $avatarURL,
+    "size": $avatarSize,
+    "tagName": 'span',
+    "accessibilityText" : $username
+    })
+#end

@@ -1,0 +1,3 @@
+com.atlassian.jira.issue.customfields.manager.GenericConfigManager
+com.atlassian.jira.issue.customfields.persistence.CustomFieldValuePersister
+com.atlassian.sal.api.ApplicationProperties

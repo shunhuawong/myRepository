@@ -1,0 +1,15 @@
+#disable_html_escaping()
+
+#customControlHeader ($action "$!{displayParameters.fieldNamePrefix}${field.id}" $i18n.getText($field.nameKey) true $displayParameters $auiparams)
+<div id="$!{displayParameters.fieldNamePrefix}${field.id}-options" data-suggestions="$textutils.htmlEncode($configOptionsJson)"></div>
+
+<script type="application/json" id="$!{displayParameters.fieldNamePrefix}${field.id}-projects">$!projectToConfigJson</script>
+<script type="application/json" id="$!{displayParameters.fieldNamePrefix}${field.id}-defaults">$!configToDefaultOptionJson</script>
+
+<input type="text" value="$!textutils.htmlEncode($issuetype)" data-container-class="issuetype-ss" class="issuetype-field"
+       id="$!{displayParameters.fieldNamePrefix}$field.id" name="$!{displayParameters.fieldNamePrefix}${field.id}"/>
+#localHelp ('issue.field.issuetype' 'IssueTypes')
+#if ($displayParameters && $displayParameters.restrictedSelection)
+    <div class="description">$i18n.getText('issue.field.issuetype.incompatible.types')</div>
+#end
+#customControlFooter ($action"$!{displayParameters.fieldNamePrefix}${field.id}" $fieldLayoutItem.fieldDescription $displayParameters $auiparams)

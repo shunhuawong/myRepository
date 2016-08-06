@@ -1,0 +1,10 @@
+#disable_html_escaping()
+#if(${fieldValue} && $fieldValue.length() != 0 && ${fieldValue} != 'null')
+    #if ($fieldId.equals("issue.field.assignee") && $fieldValue.equals("-1"))
+        $i18n.getText("admin.workflow.function.update-issue-field.view.set-to-default", "<b>", "${descriptor.getText($fieldId)}", "</b>")
+    #else
+        $i18n.getText("admin.workflow.function.update-issue-field.view.1", "<b>", "${descriptor.getText($fieldId)}", "</b>", "$textutils.htmlEncode(${fieldValue})")
+    #end
+#else
+    $i18n.getText("admin.workflow.function.update-issue-field.view.2", "<b>", "${descriptor.getText($fieldId)}", "</b>")
+#end

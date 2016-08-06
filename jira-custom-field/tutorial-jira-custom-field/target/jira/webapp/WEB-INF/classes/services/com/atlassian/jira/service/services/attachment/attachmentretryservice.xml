@@ -1,0 +1,14 @@
+<attachmentretryservice id="attachmentretryservice">
+    <description>
+        admin.service.issue.attachment.retry.desc
+    </description>
+    <properties>
+        <property>
+            <key>retryCount</key>
+            <name>admin.service.issue.attachment.retry.count</name>
+            <description>admin.service.issue.attachment.retry.count.desc</description>
+            <type>long</type>
+            <default>3</default>
+        </property>
+    </properties>
+</attachmentretryservice>

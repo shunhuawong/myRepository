@@ -1,0 +1,21 @@
+#disable_html_escaping()
+
+#if ($avatarURL && !$avatarURL.empty())
+    #set ($avatarCssClass = " jira-user-avatar jira-user-avatar-" + $avatarSize)
+#end
+
+#if ($user)
+    <a class="jira-user-name user-hover$!{avatarCssClass}" rel="${textutils.htmlEncode($username)}" id="$!{id}_${textutils.htmlEncode($username)}" href="${baseurl}/secure/ViewProfile.jspa?name=${velocityhelper.urlencode($username)}">
+        #parse("/templates/plugins/userformat/avatarOnly.vm")
+        ${textutils.htmlEncode($fullname)}
+    </a>
+#elseif ($username)
+    <span class="jira-user-name user-hover$!{avatarCssClass}" id="$!{id}_${textutils.htmlEncode($username)}" rel="${textutils.htmlEncode($username)}">
+        #parse("/templates/plugins/userformat/avatarOnly.vm")
+        ${textutils.htmlEncode($username)}
+    </span>
+#else
+    <span class="jira-user-name">
+        $defaultFullName
+    </span>
+#end

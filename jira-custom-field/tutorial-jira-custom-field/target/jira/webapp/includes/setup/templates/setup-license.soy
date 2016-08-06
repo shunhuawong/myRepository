@@ -1,0 +1,82 @@
+{namespace JIRA.Templates.LicenseSetup}
+
+/**
+ * Render form for importing license
+ * @param? serverId the Server ID of this instance
+ */
+{template .renderExistingLicenseForm}
+    {let $macRedirect}<a class="generate-mac-license" id="generate-mac-license">{/let}
+    {let $endLink}</a>{/let}
+
+    <form method="post" id="importLicenseForm" class="aui ajs-dirty-warning-exempt">
+        <h3>{getText('setup.importlicense.header')}</h3>
+
+        <div id="formError"></div>
+        <div id="formWarning"></div>
+
+        <div class="field-group">
+            <label for="serverId">{getText('setup.importlicense.serverId')}</label>
+            <span class="field-value" name="serverId" id="serverId" title="{getText('setup.importlicense.serverId')}">{$serverId}</span>
+        </div>
+
+        <div class="field-group">
+            <label for="licenseKey">{getText('setup.importlicense.license')}</label>
+            <textarea class="textarea full-width-field license-key" rows="7" name="licenseKey" id="licenseKey" title="{getText('setup.importlicense.license')}"></textarea>
+            {getText('setup.importlicense.generate', $macRedirect, $endLink)|noAutoescape}
+        </div>
+
+        <div class="buttons-container">
+            <div class="buttons">
+              <input class="aui-button aui-button-primary" type="submit" value="{getText('setup.importlicense.submit')}">
+              <div class="throbbers-placeholder"></div>
+            </div>
+        </div>
+    </form>
+{/template}
+
+/**
+ * Render a throbber / spinner
+ * @param msg
+ */
+{template .renderSpinner}
+<div class="throbber-message">
+    <span class="aui-icon aui-icon-wait"></span>{sp}{$msg}
+</div>
+{/template}
+
+/**
+ * @param macLicense
+ */
+{template .pageMockForQUnit}
+    <form action="SetupLicense.jspa" class="aui" id="jira-setupwizard" method="post">
+        <div class="form-body">
+            <h2>
+                Specify your license key
+            </h2>
+            <div>
+                <p>
+                    You need a license key to set up JIRA. Enter your license key or generate a new license key below. You need an account at <a href="http://my.atlassian.com" target="_blank">my.atlassian.com</a> to generate a license key.
+                </p>
+            </div>
+
+            <div id="no-connection-warning" class="aui-message warning shadowed hidden">
+                <p class="title">
+                    <span class="aui-icon icon-warning"></span>
+                    <strong>Unable to reach my.atlassian.com</strong>
+                </p>
+                <p>
+                    We can't contact <a href="https://id.atlassian.com" target="_blank">my.atlassian.com</a>. Make sure you're connected to the Internet and try again. Otherwise, go to <a href="https://id.atlassian.com" target="_blank">my.atlassian.com</a>, create an account and generate a license. When you have the license key, enter it in the box below.
+                </p>
+            </div>
+
+            <div id="license-input-container" class="license-input-container hidden"></div>
+        </div>
+    </form>
+    <div id="hidden-license-setup" class="hidden">
+        <div id="mac-redirect" data-mac-redirect-url="someUrl"></div>
+        <form method="post" id="setupLicenseForm" action="SetupLicense.jspa">
+            <input name="setupLicenseKey" id="setupLicenseKey" value="{$macLicense}"/>
+        </form>
+    </div>
+
+{/template}

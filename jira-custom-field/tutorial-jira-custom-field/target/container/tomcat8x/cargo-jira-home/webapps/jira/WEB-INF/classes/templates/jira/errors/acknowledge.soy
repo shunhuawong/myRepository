@@ -1,0 +1,45 @@
+{namespace JIRA.Templates.errors}
+
+/**
+ * @param title Context for the messages
+ * @param messages Things user should become aware of
+ * @param redirectUri Location of the next page user should see
+ */
+{template .acknowledge}
+    {call aui.page.document}
+        {param pageType: 'focused' /}
+        {param focusedPageSize: 'medium' /}
+        {param windowTitle: $title /}
+        {param headContent: '' /}
+        {param content}
+            {call aui.page.page}
+                {param headerContent: '' /}
+                {param contentContent}
+                    {call aui.page.pagePanel}
+                        {param content}
+                            {call aui.page.pagePanelContent}
+                                {param content}
+                                    <div class="acknowledge-dialog">
+                                        <h1>{$title}</h1>
+                                        {foreach $message in $messages}
+                                            <div class="aui-message aui-message-{$message.auiMessageType} {$message.auiMessageType}">
+                                                   <p class="title">
+                                                      <strong>{$message.title}</strong>
+                                                   </p>
+                                                   <p>{$message.htmlMessage |noAutoescape}</p>
+                                            </div>
+                                        {/foreach}
+                                        <a href="{$redirectUri}" class="aui-button">
+                                            {getText('common.words.acknowledge')}
+                                        </a>
+                                    </div>
+                                {/param}
+                            {/call}
+                         {/param}
+                    {/call}
+                {/param}
+                {param footerContent: '' /}
+            {/call}
+        {/param}
+    {/call}
+{/template}

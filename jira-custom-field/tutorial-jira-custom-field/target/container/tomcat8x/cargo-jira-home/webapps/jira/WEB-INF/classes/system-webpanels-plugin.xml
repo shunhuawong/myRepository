@@ -1,0 +1,36 @@
+<atlassian-plugin key="jira.webpanels" i18n-name-key="admin.web.planels.plugin.name" name="Web Panel Plugin" >
+    <plugin-info>
+        <description key="admin.web.panels.plugin.desc">System Web Panels</description>
+        <version>1.0</version>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+    </plugin-info>
+
+    <web-panel key="websudo-notification" location="jira-banner" weight="100">
+        <condition class="com.atlassian.jira.plugin.webpanel.notification.IsWebSudoAuthenticated"/>
+        <context-provider class="com.atlassian.jira.plugin.webpanel.notification.WebSudoNotificationContextProvider"/>
+        <resource name="view" type="soy" location=":soy-templates/JIRA.Templates.Banner.webSudoBanner"/>
+    </web-panel>
+
+    <web-panel key="recovery-notification" location="jira-banner" weight="90">
+        <conditions type="AND">
+            <condition class="com.atlassian.jira.plugin.webpanel.notification.IsRecoveryModeEnabled"/>
+            <condition class="com.atlassian.jira.plugin.webfragment.conditions.UserIsAdminCondition"/>
+        </conditions>
+        <context-provider class="com.atlassian.jira.plugin.webpanel.notification.RecoveryModeContextProvider"/>
+        <resource name="view" type="soy" location=":soy-templates/JIRA.Templates.Banner.recoveryBanner"/>
+    </web-panel>
+
+    <web-panel key="user-limit-exceeded-notification" location="jira-banner" weight="80">
+        <conditions type="AND">
+            <condition class="com.atlassian.jira.plugin.webfragment.conditions.UserIsAdminCondition"/>
+            <condition class="com.atlassian.jira.plugin.webpanel.notification.IsAnyApplicationRoleUserLimitExceeded"/>
+        </conditions>
+        <context-provider class="com.atlassian.jira.plugin.webpanel.notification.UserLimitExceededContextProvider"/>
+        <resource name="view" type="soy" location=":soy-templates/JIRA.Templates.Banner.usersExceededBannerMessage"/>
+    </web-panel>
+
+    <web-resource key="soy-templates">
+        <dependency>com.atlassian.auiplugin:aui-experimental-soy-templates</dependency>
+        <resource type="soy" name="websudo" location="templates/jira/webpanel/notifications/banner.soy"/>
+    </web-resource>
+</atlassian-plugin>

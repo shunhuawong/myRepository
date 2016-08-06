@@ -1,0 +1,13 @@
+2016-08-06 12:59:00,134 localhost-startStop-1      JIRA 7.1.9 build: 71013 started. You can now access JIRA through your web browser.
+2016-08-06 13:18:44,989 http-nio-2990-exec-5   -   HttpSession created [upkhh0]
+2016-08-06 13:18:44,989 http-nio-2990-exec-3 anonymous 798x1x1 - 192.168.0.68 / HttpSession created [8xs0t2]
+2016-08-06 13:19:13,334 http-nio-2990-exec-2 anonymous 799x9x1 upkhh0 192.168.0.68 /rest/gadget/1.0/login HttpSession [upkhh0] destroyed for 'anonymous'
+2016-08-06 13:19:13,334 http-nio-2990-exec-2 anonymous 799x9x1 upkhh0 192.168.0.68 /rest/gadget/1.0/login HttpSession created [1kdh9d2]
+2016-08-06 13:19:13,514 http-nio-2990-exec-2 admin 799x9x1 upkhh0 192.168.0.68 /rest/gadget/1.0/login The user 'admin' has PASSED authentication.
+2016-08-06 13:20:12,717 ContainerBackgroundProcessor[StandardEngine[Catalina]]      HttpSession [8xs0t2] destroyed for 'anonymous'
+2016-08-06 14:09:37,673 localhost-startStop-1      JIRA 7.1.9 build: 71013 started. You can now access JIRA through your web browser.
+2016-08-06 14:10:43,344 http-nio-2990-exec-3 anonymous 850x1x1 - 192.168.0.68 / HttpSession created [78frtv]
+2016-08-06 14:10:44,228 http-nio-2990-exec-3 admin 850x1x1 - 192.168.0.68 / The user 'admin' has PASSED authentication.
+2016-08-06 14:10:47,915 http-nio-2990-exec-10 anonymous 850x2x2 - 192.168.0.68 / HttpSession created [clh76l]
+2016-08-06 14:10:47,933 http-nio-2990-exec-10 admin 850x2x2 - 192.168.0.68 / The user 'admin' has PASSED authentication.
+2016-08-06 14:12:48,864 ContainerBackgroundProcessor[StandardEngine[Catalina]]      HttpSession [78frtv] destroyed for 'admin'

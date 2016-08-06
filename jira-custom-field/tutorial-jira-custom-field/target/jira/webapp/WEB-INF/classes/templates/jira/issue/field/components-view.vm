@@ -1,0 +1,9 @@
+#disable_html_escaping()
+#if ($components && $components.empty == false)
+  #set ($size = $components.size())
+  #foreach ($component in $components)
+    ${textutils.htmlEncode(${component.name})}#if ($displayParameters.get('showProject')) <small>[<strong>$i18n.getText('common.concepts.project'):</strong> ${textutils.htmlEncode($projectManager.getProjectObj($component.projectId).getName())}]</small>#end
+#if($velocityCount != $size),#end
+#end
+#end
+#if ($displayParameters.containsKey('bulkEditNewValues'))#if($components && $components.empty == false), #end${textutils.htmlEncode(${displayParameters.get('bulkEditNewValues')})}#end

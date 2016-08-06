@@ -1,0 +1,186 @@
+{namespace JIRA.Templates.Signup}
+
+/**
+ * @param contactLink
+ * @param isContactFormEnabled
+ **/
+{template .modebreach}
+    {let $contactLinkBeginning: $isContactFormEnabled ? '<a href="' + $contactLink + '">' : '' /}
+    {let $contactLinkEnding: $isContactFormEnabled ? '</a>' : '' /}
+
+    {call .signupMessagePage}
+        {param title: getText('mode.breach.title') /}
+        {param header: getText('signup.cannot.signup.now') /}
+        {param messageType: 'error' /}
+        {param messageContent}
+            <p>
+                {getText('signup.mode.private.message')}
+            </p>
+        {/param}
+        {param additionalContent: getText('signup.mode.private.contact.administrators', $contactLinkBeginning, $contactLinkEnding) /}
+    {/call}
+{/template}
+
+/**
+ * @param newsHref
+ **/
+{template .success}
+    {call .signupMessagePage}
+        {param title: getText('signup.heading.success') /}
+        {param header: getText('signup.heading.success') /}
+        {param messageType: 'success' /}
+        {param messageContent}
+            <p>
+                {let $forgotLoginLink: '<a href="' + contextPath() + '/secure/ForgotLoginDetails.jspa">' /}
+                {getText('signup.success', $forgotLoginLink, '</a>')|noAutoescape}
+            </p>
+        {/param}
+        {param additionalContent}
+            {let $externalLink: '<a href="'+ $newsHref + '">'/}
+            {getText('signup.stay.in.touch', $externalLink, '</a>')|noAutoescape}
+        {/param}
+        {param buttonLink: contextPath() + '/login.jsp' /}
+        {param buttonText: getText('login.click') /}
+    {/call}
+{/template}
+
+/**
+ * @param xsrfToken
+ **/
+{template .alreadyLogged}
+    {call .signupMessagePage}
+        {param title: getText('signup.heading.already.logged.in') /}
+        {param header: getText('signup.heading.already.logged.in') /}
+        {param messageType: 'warning' /}
+        {param messageContent}
+            <p>
+                {let $link: '<a id="log_out" href="' + contextPath() + '/secure/Logout.jspa?atl_token=' + $xsrfToken + '">'/}
+                {getText('signup.already.logged.in', $link, '</a>')|noAutoescape}
+            </p>
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * @param contactLink
+ * @param isContactFormEnabled
+ * @param showUpfront
+ **/
+{template .appAccessError}
+    {let $contactLinkBeginning: $isContactFormEnabled ? '<a href="' + $contactLink + '">' : '' /}
+    {let $contactLinkEnding: $isContactFormEnabled ? '</a>' : '' /}
+
+    {call .signupMessagePage}
+        {param title: getText('signup.heading.app.access.error') /}
+        {param header: getText('signup.cannot.signup.now') /}
+        {param messageType: 'error' /}
+        {param messageContent}
+            <p>
+                {if $showUpfront}
+                    {getText('signup.app.access.error.upfront', $contactLinkBeginning, $contactLinkEnding)|noAutoescape}
+                {else}
+                    {getText('signup.app.access.error.submit', $contactLinkBeginning, $contactLinkEnding)|noAutoescape}
+                {/if}
+            </p>
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * @param contactLink
+ * @param isContactFormEnabled
+ **/
+{template .limitExceeded}
+    {let $contactLinkBeginning: $isContactFormEnabled ? '<a href="' + $contactLink + '">' : '' /}
+    {let $contactLinkEnding: $isContactFormEnabled ? '</a>' : '' /}
+
+    {call .signupMessagePage}
+        {param title: getText('signup.heading.user.limit.exceeded') /}
+        {param header: getText('signup.cannot.signup.now') /}
+        {param messageType: 'error' /}
+        {param messageContent}
+            <p>{getText('signup.limit.exceeded', $contactLinkBeginning, $contactLinkEnding)|noAutoescape}</p>
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * @param contactLink
+ * @param isContactFormEnabled
+ **/
+{template .systemError}
+    {let $contactLinkBeginning: $isContactFormEnabled ? '<a href="' + $contactLink + '">' : '' /}
+    {let $contactLinkEnding: $isContactFormEnabled ? '</a>' : '' /}
+
+    {call .signupMessagePage}
+        {param title: getText('signup.title') /}
+        {param header: getText('signup.cannot.signup.now') /}
+        {param messageType: 'error' /}
+        {param messageContent}
+            <p>{getText('signup.error.creating.user', $contactLinkBeginning, $contactLinkEnding)|noAutoescape}</p>
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * @param title
+ * @param header
+ * @param messageType Message type
+ * @param messageContent Message content
+ * @param? additionalContent content below message, but above separator
+ * @param? buttonLink link attached to button at the bottom of page. If not set and $button is true, redirects to dashboard
+ * @param? buttonText Text attached to button at the bottom of page. If not set and $button is true, defaults to "Return to dashboard"
+ */
+{template .signupMessagePage private="true"}
+    {call aui.page.document}
+        {param pageType: 'focused' /}
+        {param pageSize: 'medium' /}
+        {param windowTitle: $title /}
+        {param extraClasses: 'page-type-message'/}
+        {param content}
+            {call aui.page.pagePanel}
+                {param content}
+                    {call aui.page.pagePanelContent}
+                        {param content}
+                            <h2>{$header}</h2>
+                            {switch $messageType}
+                                {case 'warning'}
+                                    {call aui.message.warning}
+                                        {param content: $messageContent /}
+                                    {/call}
+                                {case 'error'}
+                                    {call aui.message.error}
+                                        {param content: $messageContent /}
+                                    {/call}
+                                {case 'success'}
+                                    {call aui.message.success}
+                                        {param content: $messageContent /}
+                                    {/call}
+                            {/switch}
+
+                            {if $additionalContent}
+                                <p>
+                                    {$additionalContent|noAutoescape}
+                                </p>
+                            {/if}
+
+                            {let $finalButtonLink: $buttonLink ? $buttonLink : contextPath() + '/secure/Dashboard.jspa' /}
+                            {let $finalButtonText: $buttonText ? $buttonText : getText('signup.return.to.dashboard') /}
+
+                            {call aui.form.buttons}
+                                {param extraClasses: 'horizontally-aligned'/}
+                                {param content}
+                                    {call aui.buttons.button}
+                                        {param type: 'primary'/}
+                                        {param href: $finalButtonLink /}
+                                        {param text: $finalButtonText /}
+                                    {/call}
+                                {/param}
+                            {/call}
+                        {/param}
+                    {/call}
+                {/param}
+            {/call}
+        {/param}
+    {/call}
+{/template}

@@ -1,0 +1,1947 @@
+;
+/* module-key = 'com.atlassian.plugins.browser.metrics.browser-metrics-plugin:impl', location = 'internal/browser-metrics-aa-beacon/impl.js' */
+require(["internal/browser-metrics","internal/browser-metrics-aa-beacon"],function(n,r){var t={},e={},o={},i={},u={},c={},a={},f={},d={},s={},v={},h={},l={},p={},m={},y={},E={},g={},b={},S={};t=function(){var n=function(n){return"number"==typeof n};return n}(t),e=function(n,r){function t(n){return r(n.apdex)}var e=function(n){return t(n)?{apdex:""+n.apdex}:void 0};return e}(e,t),o=function(){var n=function(n){return""+Math.floor(n)};return n}(o),i=function(n,r,t){function e(n){return t(n.firstPaint)}var o=function(n){return e(n)?{firstPaint:r(n.firstPaint)}:void 0};return o}(i,o,t),u=function(){function n(n){return"boolean"==typeof n.isInitial}var r=function(r){return n(r)?{isInitial:""+r.isInitial}:void 0};return r}(u),c=function(){var n=function(n){return"string"==typeof n};return n}(c),a=function(n,r){function t(n){return r(n.journeyId)}var e=function(n){return t(n)?{journeyId:n.journeyId}:void 0};return e}(a,c),f=function(n,r){function t(n){return r(n.key)}var e=function(n){return t(n)?{key:n.key}:void 0};return e}(f,c),d=function(n,r){function t(n){return r(n.navigationType)}var e=function(n){return t(n)?{navigationType:""+n.navigationType}:void 0};return e}(d,t),s=function(n,r,t){function e(n){return t(n.readyForUser)}var o=function(n){return e(n)?{readyForUser:r(n.readyForUser)}:void 0};return o}(s,o,t),v=function(n,r){function t(n){return r(n.redirectCount)}var e=function(n){return t(n)?{redirectCount:""+n.redirectCount}:void 0};return e}(v,t),h=function(n,r,t){function e(n){return t(n.resourceLoadedEnd)}var o=function(n){return e(n)?{resourceLoadedEnd:r(n.resourceLoadedEnd)}:void 0};return o}(h,o,t),l=function(){var n=function(n,r){Object.keys(n).forEach(function(t){r(t,n[t])})};return n}(l),p=function(n,r){function t(n){return Object.keys(n).length}var e=function(){function n(){this.children={},this.values=[]}return n.prototype.add=function(r,t){0==r.length?this.values.push(t):(this.children.hasOwnProperty(r[0])||(this.children[r[0]]=new n),this.children[r[0]].add(r.substr(1),t))},n.prototype.toTrieObject=function(){var n={};return r(this.children,function(r,t){n[r]=t.toTrieObject()}),0===this.values.length?n:0===t(this.children)?this.values:[n,this.values]},n.prototype.condensed=function(){var e=new n;return e.values=this.values.concat(),r(this.children,function(n,o){var i=o.condensed();0===i.values.length&&1===t(i.children)?r(i.children,function(r,t){e.children[n+r]=t}):e.children[n]=i}),e},n}(),o=e;return o}(p,l),m=function(n,r,t){function e(n){return Array.isArray(n.resourceTiming)}function o(n){return n=Math.floor(n||0),n>0?i(n):""}function i(n){return n.toString(36)}function u(n){return[c[n.initiatorType]||a,o(n.startTime),o(n.responseEnd),o(n.responseStart),o(n.requestStart),o(n.connectEnd),o(n.secureConnectionStart),o(n.connectStart),o(n.domainLookupEnd),o(n.domainLookupStart),o(n.redirectEnd),o(n.redirectStart)].join(",").replace(/,+$/,"")}var c={other:0,img:1,link:2,script:3,css:4,xmlhttprequest:5},a=-1,f=function(n){if(e(n)){var o=new t;return n.resourceTiming.forEach(function(n){var t=r.cleanUrl(n.name);o.add(t||"☠",u(n))}),{resourceTiming:JSON.stringify(o.condensed().toTrieObject())}}};return f}(m,r,p),y=function(n,r,t){function e(n){return t(n.threshold)}var o=function(n){return e(n)?{threshold:r(n.threshold)}:void 0};return o}(y,o,t),E=function(n,r,t){var e="unloadEventStart,unloadEventEnd,redirectStart,redirectEnd,fetchStart,domainLookupStart,domainLookupEnd,connectStart,connectEnd,secureConnectionStart,requestStart,responseStart,responseEnd,domLoading,domInteractive,domContentLoadedEventStart,domContentLoadedEventEnd,domComplete,loadEventStart,loadEventEnd".split(","),o=function(n){var o={};return e.forEach(function(e){t(n[e])&&(o[e]=r(n[e]))}),o};return o}(E,o,t),g=function(n,r){function t(n){return r(n.userAgent)}var e=function(n){return t(n)?{userAgent:n.userAgent}:void 0};return e}(g,c),b=function(n,r){function t(n){return"object"==typeof n.marks}var e=function(n){if(t(n)){var e={},o={},i={};return n.marks.forEach(function(n){var r="mark."+n.name;o[r]=o[r]||[],o[r].push(Math.floor(n.time))}),r(o,function(n,r){e[n]=JSON.stringify(r)}),n.measures.forEach(function(n){var r="measure."+n.name;i[r]=i[r]||[],i[r].push([Math.floor(n.startTime),Math.floor(n.duration)])}),r(i,function(n,r){e[n]=JSON.stringify(r)}),e}};return e}(b,l),S=function(n,r,t,e,o,i,u,c,a,f,d,s,v,h,l,p,m){var y=t.addReportMarshaller;return y(e),y(o),y(i),y(u),y(c),y(a),y(f),y(d),y(s),y(v),y(h),y(l),y(p),y(m),r.subscribe(function(n){t.beacon(n.report)}),n}(S,n,r,e,i,u,a,f,d,s,v,h,m,y,E,g,b)});;
+;
+/* module-key = 'com.atlassian.plugins.browser.metrics.browser-metrics-plugin:impl', location = 'impl.js' */
+define("internal/browser-metrics-plugin/collector", function () {
+    return {
+        install: function () {
+            ;(function() {
+var transition, reporters_readyForUser, reporters_apdex, es6_promise, util_promise, util_badger, util_window, reporters_firstPaint, reporters_isInitial, reporters_journeyId, reporters_key, util_supports_navigation_timing, reporters_navigationType, reporters_redirectCount, util_absolutise_url, util_is_function, util_performance, util_on_resource_timing_buffer_full, util_supports_resource_timing, util_recent_resource_timing, util_relative_navigation_timing, util_initial_blocking_resource_timing, reporters_resourceLoadedEnd, reporters_resourceTiming, reporters_threshold, reporters_timing, reporters_userAgent, reporters_userTiming, reporters, util_merge, util_log_error, build_report, agent, lib_probe, index;
+transition = function () {
+  /**
+   * Represents a transition that's initiated by a user.
+   *
+   * @param {number} options.timestamp
+   * @param {boolean} options.isInitial
+   * @param {number} options.threshold
+   * @param {string} options.key
+   *
+   * @class
+   * @member {string} key The name of the type of transition we're measuring, e.g. in JIRA you would use
+   *     "jira.issue.view" when measuring navigating to the issue view page.
+   * @member {boolean} isInitial Indicates whether the transition required loading an entire page from scratch i.e. a
+   *     "full page load".
+   * @member {number} timestamp The time when the transition started, measured in the number of milliseconds since
+   *     performance.timing.navigationStart.
+   * @member {number|null} end
+   * @member {number} threshold The target threshold for this transition in milliseconds (e.g. for page loads that's
+   *     typically 1000ms).
+   */
+  function Transition(options) {
+    return {
+      isInitial: 'isInitial' in options ? options.isInitial : false,
+      start: options.timestamp,
+      end: null,
+      key: options.key,
+      threshold: options.threshold
+    };
+  }
+  return Transition;
+}();
+reporters_readyForUser = function () {
+  /**
+   * Create a report containing the duration of the transition.
+   *
+   * @param {Transition} transition
+   * @returns {Promise<{readyForUser: number}>}
+   */
+  function readyForUser(transition) {
+    return { readyForUser: transition.end - transition.start };
+  }
+  return readyForUser;
+}();
+reporters_apdex = function (readyForUserReporter) {
+  /**
+   * Produce a report containing the apdex score for the transition.
+   *
+   * @param {Transition} transition
+   * @returns {Promise<{apdex: number}>}
+   */
+  return function apdexReporter(transition) {
+    var apdex;
+    var report = readyForUserReporter(transition);
+    var satisfiedThreshold = transition.threshold;
+    var tolerableThreshold = transition.threshold * 4;
+    if (report.readyForUser < satisfiedThreshold) {
+      apdex = 1;
+    } else if (report.readyForUser < tolerableThreshold) {
+      apdex = 0.5;
+    } else {
+      apdex = 0;
+    }
+    return { apdex: apdex };
+  };
+}(reporters_readyForUser);
+/*!
+ * @overview es6-promise - a tiny implementation of Promises/A+.
+ * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
+ * @license   Licensed under MIT license
+ *            See https://raw.githubusercontent.com/jakearchibald/es6-promise/master/LICENSE
+ * @version   2.0.0
+ */
+(function () {
+  'use strict';
+  function $$utils$$objectOrFunction(x) {
+    return typeof x === 'function' || typeof x === 'object' && x !== null;
+  }
+  function $$utils$$isFunction(x) {
+    return typeof x === 'function';
+  }
+  function $$utils$$isMaybeThenable(x) {
+    return typeof x === 'object' && x !== null;
+  }
+  var $$utils$$_isArray;
+  if (!Array.isArray) {
+    $$utils$$_isArray = function (x) {
+      return Object.prototype.toString.call(x) === '[object Array]';
+    };
+  } else {
+    $$utils$$_isArray = Array.isArray;
+  }
+  var $$utils$$isArray = $$utils$$_isArray;
+  var $$utils$$now = Date.now || function () {
+    return new Date().getTime();
+  };
+  function $$utils$$F() {
+  }
+  var $$utils$$o_create = Object.create || function (o) {
+    if (arguments.length > 1) {
+      throw new Error('Second argument not supported');
+    }
+    if (typeof o !== 'object') {
+      throw new TypeError('Argument must be an object');
+    }
+    $$utils$$F.prototype = o;
+    return new $$utils$$F();
+  };
+  var $$asap$$len = 0;
+  var $$asap$$default = function asap(callback, arg) {
+    $$asap$$queue[$$asap$$len] = callback;
+    $$asap$$queue[$$asap$$len + 1] = arg;
+    $$asap$$len += 2;
+    if ($$asap$$len === 2) {
+      // If len is 1, that means that we need to schedule an async flush.
+      // If additional callbacks are queued before the queue is flushed, they
+      // will be processed by this flush that we are scheduling.
+      $$asap$$scheduleFlush();
+    }
+  };
+  var $$asap$$browserGlobal = typeof window !== 'undefined' ? window : {};
+  var $$asap$$BrowserMutationObserver = $$asap$$browserGlobal.MutationObserver || $$asap$$browserGlobal.WebKitMutationObserver;
+  // test for web worker but not in IE10
+  var $$asap$$isWorker = typeof Uint8ClampedArray !== 'undefined' && typeof importScripts !== 'undefined' && typeof MessageChannel !== 'undefined';
+  // node
+  function $$asap$$useNextTick() {
+    return function () {
+      process.nextTick($$asap$$flush);
+    };
+  }
+  function $$asap$$useMutationObserver() {
+    var iterations = 0;
+    var observer = new $$asap$$BrowserMutationObserver($$asap$$flush);
+    var node = document.createTextNode('');
+    observer.observe(node, { characterData: true });
+    return function () {
+      node.data = iterations = ++iterations % 2;
+    };
+  }
+  // web worker
+  function $$asap$$useMessageChannel() {
+    var channel = new MessageChannel();
+    channel.port1.onmessage = $$asap$$flush;
+    return function () {
+      channel.port2.postMessage(0);
+    };
+  }
+  function $$asap$$useSetTimeout() {
+    return function () {
+      setTimeout($$asap$$flush, 1);
+    };
+  }
+  var $$asap$$queue = new Array(1000);
+  function $$asap$$flush() {
+    for (var i = 0; i < $$asap$$len; i += 2) {
+      var callback = $$asap$$queue[i];
+      var arg = $$asap$$queue[i + 1];
+      callback(arg);
+      $$asap$$queue[i] = undefined;
+      $$asap$$queue[i + 1] = undefined;
+    }
+    $$asap$$len = 0;
+  }
+  var $$asap$$scheduleFlush;
+  // Decide what async method to use to triggering processing of queued callbacks:
+  if (typeof process !== 'undefined' && {}.toString.call(process) === '[object process]') {
+    $$asap$$scheduleFlush = $$asap$$useNextTick();
+  } else if ($$asap$$BrowserMutationObserver) {
+    $$asap$$scheduleFlush = $$asap$$useMutationObserver();
+  } else if ($$asap$$isWorker) {
+    $$asap$$scheduleFlush = $$asap$$useMessageChannel();
+  } else {
+    $$asap$$scheduleFlush = $$asap$$useSetTimeout();
+  }
+  function $$$internal$$noop() {
+  }
+  var $$$internal$$PENDING = void 0;
+  var $$$internal$$FULFILLED = 1;
+  var $$$internal$$REJECTED = 2;
+  var $$$internal$$GET_THEN_ERROR = new $$$internal$$ErrorObject();
+  function $$$internal$$selfFullfillment() {
+    return new TypeError('You cannot resolve a promise with itself');
+  }
+  function $$$internal$$cannotReturnOwn() {
+    return new TypeError('A promises callback cannot return that same promise.');
+  }
+  function $$$internal$$getThen(promise) {
+    try {
+      return promise.then;
+    } catch (error) {
+      $$$internal$$GET_THEN_ERROR.error = error;
+      return $$$internal$$GET_THEN_ERROR;
+    }
+  }
+  function $$$internal$$tryThen(then, value, fulfillmentHandler, rejectionHandler) {
+    try {
+      then.call(value, fulfillmentHandler, rejectionHandler);
+    } catch (e) {
+      return e;
+    }
+  }
+  function $$$internal$$handleForeignThenable(promise, thenable, then) {
+    $$asap$$default(function (promise) {
+      var sealed = false;
+      var error = $$$internal$$tryThen(then, thenable, function (value) {
+        if (sealed) {
+          return;
+        }
+        sealed = true;
+        if (thenable !== value) {
+          $$$internal$$resolve(promise, value);
+        } else {
+          $$$internal$$fulfill(promise, value);
+        }
+      }, function (reason) {
+        if (sealed) {
+          return;
+        }
+        sealed = true;
+        $$$internal$$reject(promise, reason);
+      }, 'Settle: ' + (promise._label || ' unknown promise'));
+      if (!sealed && error) {
+        sealed = true;
+        $$$internal$$reject(promise, error);
+      }
+    }, promise);
+  }
+  function $$$internal$$handleOwnThenable(promise, thenable) {
+    if (thenable._state === $$$internal$$FULFILLED) {
+      $$$internal$$fulfill(promise, thenable._result);
+    } else if (promise._state === $$$internal$$REJECTED) {
+      $$$internal$$reject(promise, thenable._result);
+    } else {
+      $$$internal$$subscribe(thenable, undefined, function (value) {
+        $$$internal$$resolve(promise, value);
+      }, function (reason) {
+        $$$internal$$reject(promise, reason);
+      });
+    }
+  }
+  function $$$internal$$handleMaybeThenable(promise, maybeThenable) {
+    if (maybeThenable.constructor === promise.constructor) {
+      $$$internal$$handleOwnThenable(promise, maybeThenable);
+    } else {
+      var then = $$$internal$$getThen(maybeThenable);
+      if (then === $$$internal$$GET_THEN_ERROR) {
+        $$$internal$$reject(promise, $$$internal$$GET_THEN_ERROR.error);
+      } else if (then === undefined) {
+        $$$internal$$fulfill(promise, maybeThenable);
+      } else if ($$utils$$isFunction(then)) {
+        $$$internal$$handleForeignThenable(promise, maybeThenable, then);
+      } else {
+        $$$internal$$fulfill(promise, maybeThenable);
+      }
+    }
+  }
+  function $$$internal$$resolve(promise, value) {
+    if (promise === value) {
+      $$$internal$$reject(promise, $$$internal$$selfFullfillment());
+    } else if ($$utils$$objectOrFunction(value)) {
+      $$$internal$$handleMaybeThenable(promise, value);
+    } else {
+      $$$internal$$fulfill(promise, value);
+    }
+  }
+  function $$$internal$$publishRejection(promise) {
+    if (promise._onerror) {
+      promise._onerror(promise._result);
+    }
+    $$$internal$$publish(promise);
+  }
+  function $$$internal$$fulfill(promise, value) {
+    if (promise._state !== $$$internal$$PENDING) {
+      return;
+    }
+    promise._result = value;
+    promise._state = $$$internal$$FULFILLED;
+    if (promise._subscribers.length === 0) {
+    } else {
+      $$asap$$default($$$internal$$publish, promise);
+    }
+  }
+  function $$$internal$$reject(promise, reason) {
+    if (promise._state !== $$$internal$$PENDING) {
+      return;
+    }
+    promise._state = $$$internal$$REJECTED;
+    promise._result = reason;
+    $$asap$$default($$$internal$$publishRejection, promise);
+  }
+  function $$$internal$$subscribe(parent, child, onFulfillment, onRejection) {
+    var subscribers = parent._subscribers;
+    var length = subscribers.length;
+    parent._onerror = null;
+    subscribers[length] = child;
+    subscribers[length + $$$internal$$FULFILLED] = onFulfillment;
+    subscribers[length + $$$internal$$REJECTED] = onRejection;
+    if (length === 0 && parent._state) {
+      $$asap$$default($$$internal$$publish, parent);
+    }
+  }
+  function $$$internal$$publish(promise) {
+    var subscribers = promise._subscribers;
+    var settled = promise._state;
+    if (subscribers.length === 0) {
+      return;
+    }
+    var child, callback, detail = promise._result;
+    for (var i = 0; i < subscribers.length; i += 3) {
+      child = subscribers[i];
+      callback = subscribers[i + settled];
+      if (child) {
+        $$$internal$$invokeCallback(settled, child, callback, detail);
+      } else {
+        callback(detail);
+      }
+    }
+    promise._subscribers.length = 0;
+  }
+  function $$$internal$$ErrorObject() {
+    this.error = null;
+  }
+  var $$$internal$$TRY_CATCH_ERROR = new $$$internal$$ErrorObject();
+  function $$$internal$$tryCatch(callback, detail) {
+    try {
+      return callback(detail);
+    } catch (e) {
+      $$$internal$$TRY_CATCH_ERROR.error = e;
+      return $$$internal$$TRY_CATCH_ERROR;
+    }
+  }
+  function $$$internal$$invokeCallback(settled, promise, callback, detail) {
+    var hasCallback = $$utils$$isFunction(callback), value, error, succeeded, failed;
+    if (hasCallback) {
+      value = $$$internal$$tryCatch(callback, detail);
+      if (value === $$$internal$$TRY_CATCH_ERROR) {
+        failed = true;
+        error = value.error;
+        value = null;
+      } else {
+        succeeded = true;
+      }
+      if (promise === value) {
+        $$$internal$$reject(promise, $$$internal$$cannotReturnOwn());
+        return;
+      }
+    } else {
+      value = detail;
+      succeeded = true;
+    }
+    if (promise._state !== $$$internal$$PENDING) {
+    } else if (hasCallback && succeeded) {
+      $$$internal$$resolve(promise, value);
+    } else if (failed) {
+      $$$internal$$reject(promise, error);
+    } else if (settled === $$$internal$$FULFILLED) {
+      $$$internal$$fulfill(promise, value);
+    } else if (settled === $$$internal$$REJECTED) {
+      $$$internal$$reject(promise, value);
+    }
+  }
+  function $$$internal$$initializePromise(promise, resolver) {
+    try {
+      resolver(function resolvePromise(value) {
+        $$$internal$$resolve(promise, value);
+      }, function rejectPromise(reason) {
+        $$$internal$$reject(promise, reason);
+      });
+    } catch (e) {
+      $$$internal$$reject(promise, e);
+    }
+  }
+  function $$$enumerator$$makeSettledResult(state, position, value) {
+    if (state === $$$internal$$FULFILLED) {
+      return {
+        state: 'fulfilled',
+        value: value
+      };
+    } else {
+      return {
+        state: 'rejected',
+        reason: value
+      };
+    }
+  }
+  function $$$enumerator$$Enumerator(Constructor, input, abortOnReject, label) {
+    this._instanceConstructor = Constructor;
+    this.promise = new Constructor($$$internal$$noop, label);
+    this._abortOnReject = abortOnReject;
+    if (this._validateInput(input)) {
+      this._input = input;
+      this.length = input.length;
+      this._remaining = input.length;
+      this._init();
+      if (this.length === 0) {
+        $$$internal$$fulfill(this.promise, this._result);
+      } else {
+        this.length = this.length || 0;
+        this._enumerate();
+        if (this._remaining === 0) {
+          $$$internal$$fulfill(this.promise, this._result);
+        }
+      }
+    } else {
+      $$$internal$$reject(this.promise, this._validationError());
+    }
+  }
+  $$$enumerator$$Enumerator.prototype._validateInput = function (input) {
+    return $$utils$$isArray(input);
+  };
+  $$$enumerator$$Enumerator.prototype._validationError = function () {
+    return new Error('Array Methods must be provided an Array');
+  };
+  $$$enumerator$$Enumerator.prototype._init = function () {
+    this._result = new Array(this.length);
+  };
+  var $$$enumerator$$default = $$$enumerator$$Enumerator;
+  $$$enumerator$$Enumerator.prototype._enumerate = function () {
+    var length = this.length;
+    var promise = this.promise;
+    var input = this._input;
+    for (var i = 0; promise._state === $$$internal$$PENDING && i < length; i++) {
+      this._eachEntry(input[i], i);
+    }
+  };
+  $$$enumerator$$Enumerator.prototype._eachEntry = function (entry, i) {
+    var c = this._instanceConstructor;
+    if ($$utils$$isMaybeThenable(entry)) {
+      if (entry.constructor === c && entry._state !== $$$internal$$PENDING) {
+        entry._onerror = null;
+        this._settledAt(entry._state, i, entry._result);
+      } else {
+        this._willSettleAt(c.resolve(entry), i);
+      }
+    } else {
+      this._remaining--;
+      this._result[i] = this._makeResult($$$internal$$FULFILLED, i, entry);
+    }
+  };
+  $$$enumerator$$Enumerator.prototype._settledAt = function (state, i, value) {
+    var promise = this.promise;
+    if (promise._state === $$$internal$$PENDING) {
+      this._remaining--;
+      if (this._abortOnReject && state === $$$internal$$REJECTED) {
+        $$$internal$$reject(promise, value);
+      } else {
+        this._result[i] = this._makeResult(state, i, value);
+      }
+    }
+    if (this._remaining === 0) {
+      $$$internal$$fulfill(promise, this._result);
+    }
+  };
+  $$$enumerator$$Enumerator.prototype._makeResult = function (state, i, value) {
+    return value;
+  };
+  $$$enumerator$$Enumerator.prototype._willSettleAt = function (promise, i) {
+    var enumerator = this;
+    $$$internal$$subscribe(promise, undefined, function (value) {
+      enumerator._settledAt($$$internal$$FULFILLED, i, value);
+    }, function (reason) {
+      enumerator._settledAt($$$internal$$REJECTED, i, reason);
+    });
+  };
+  var $$promise$all$$default = function all(entries, label) {
+    return new $$$enumerator$$default(this, entries, true  /* abort on reject */, label).promise;
+  };
+  var $$promise$race$$default = function race(entries, label) {
+    /*jshint validthis:true */
+    var Constructor = this;
+    var promise = new Constructor($$$internal$$noop, label);
+    if (!$$utils$$isArray(entries)) {
+      $$$internal$$reject(promise, new TypeError('You must pass an array to race.'));
+      return promise;
+    }
+    var length = entries.length;
+    function onFulfillment(value) {
+      $$$internal$$resolve(promise, value);
+    }
+    function onRejection(reason) {
+      $$$internal$$reject(promise, reason);
+    }
+    for (var i = 0; promise._state === $$$internal$$PENDING && i < length; i++) {
+      $$$internal$$subscribe(Constructor.resolve(entries[i]), undefined, onFulfillment, onRejection);
+    }
+    return promise;
+  };
+  var $$promise$resolve$$default = function resolve(object, label) {
+    /*jshint validthis:true */
+    var Constructor = this;
+    if (object && typeof object === 'object' && object.constructor === Constructor) {
+      return object;
+    }
+    var promise = new Constructor($$$internal$$noop, label);
+    $$$internal$$resolve(promise, object);
+    return promise;
+  };
+  var $$promise$reject$$default = function reject(reason, label) {
+    /*jshint validthis:true */
+    var Constructor = this;
+    var promise = new Constructor($$$internal$$noop, label);
+    $$$internal$$reject(promise, reason);
+    return promise;
+  };
+  var $$es6$promise$promise$$counter = 0;
+  function $$es6$promise$promise$$needsResolver() {
+    throw new TypeError('You must pass a resolver function as the first argument to the promise constructor');
+  }
+  function $$es6$promise$promise$$needsNew() {
+    throw new TypeError('Failed to construct \'Promise\': Please use the \'new\' operator, this object constructor cannot be called as a function.');
+  }
+  var $$es6$promise$promise$$default = $$es6$promise$promise$$Promise;
+  /**
+        Promise objects represent the eventual result of an asynchronous operation. The
+        primary way of interacting with a promise is through its `then` method, which
+        registers callbacks to receive either a promise’s eventual value or the reason
+        why the promise cannot be fulfilled.
+  
+        Terminology
+        -----------
+  
+        - `promise` is an object or function with a `then` method whose behavior conforms to this specification.
+        - `thenable` is an object or function that defines a `then` method.
+        - `value` is any legal JavaScript value (including undefined, a thenable, or a promise).
+        - `exception` is a value that is thrown using the throw statement.
+        - `reason` is a value that indicates why a promise was rejected.
+        - `settled` the final resting state of a promise, fulfilled or rejected.
+  
+        A promise can be in one of three states: pending, fulfilled, or rejected.
+  
+        Promises that are fulfilled have a fulfillment value and are in the fulfilled
+        state.  Promises that are rejected have a rejection reason and are in the
+        rejected state.  A fulfillment value is never a thenable.
+  
+        Promises can also be said to *resolve* a value.  If this value is also a
+        promise, then the original promise's settled state will match the value's
+        settled state.  So a promise that *resolves* a promise that rejects will
+        itself reject, and a promise that *resolves* a promise that fulfills will
+        itself fulfill.
+  
+  
+        Basic Usage:
+        ------------
+  
+        ```js
+        var promise = new Promise(function(resolve, reject) {
+          // on success
+          resolve(value);
+  
+          // on failure
+          reject(reason);
+        });
+  
+        promise.then(function(value) {
+          // on fulfillment
+        }, function(reason) {
+          // on rejection
+        });
+        ```
+  
+        Advanced Usage:
+        ---------------
+  
+        Promises shine when abstracting away asynchronous interactions such as
+        `XMLHttpRequest`s.
+  
+        ```js
+        function getJSON(url) {
+          return new Promise(function(resolve, reject){
+            var xhr = new XMLHttpRequest();
+  
+            xhr.open('GET', url);
+            xhr.onreadystatechange = handler;
+            xhr.responseType = 'json';
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.send();
+  
+            function handler() {
+              if (this.readyState === this.DONE) {
+                if (this.status === 200) {
+                  resolve(this.response);
+                } else {
+                  reject(new Error('getJSON: `' + url + '` failed with status: [' + this.status + ']'));
+                }
+              }
+            };
+          });
+        }
+  
+        getJSON('/posts.json').then(function(json) {
+          // on fulfillment
+        }, function(reason) {
+          // on rejection
+        });
+        ```
+  
+        Unlike callbacks, promises are great composable primitives.
+  
+        ```js
+        Promise.all([
+          getJSON('/posts'),
+          getJSON('/comments')
+        ]).then(function(values){
+          values[0] // => postsJSON
+          values[1] // => commentsJSON
+  
+          return values;
+        });
+        ```
+  
+        @class Promise
+        @param {function} resolver
+        @param {String} label optional string for labeling the promise.
+        Useful for tooling.
+        @constructor
+      */
+  function $$es6$promise$promise$$Promise(resolver, label) {
+    this._id = $$es6$promise$promise$$counter++;
+    this._label = label;
+    this._state = undefined;
+    this._result = undefined;
+    this._subscribers = [];
+    if ($$$internal$$noop !== resolver) {
+      if (!$$utils$$isFunction(resolver)) {
+        $$es6$promise$promise$$needsResolver();
+      }
+      if (!(this instanceof $$es6$promise$promise$$Promise)) {
+        $$es6$promise$promise$$needsNew();
+      }
+      $$$internal$$initializePromise(this, resolver);
+    }
+  }
+  $$es6$promise$promise$$Promise.all = $$promise$all$$default;
+  $$es6$promise$promise$$Promise.race = $$promise$race$$default;
+  $$es6$promise$promise$$Promise.resolve = $$promise$resolve$$default;
+  $$es6$promise$promise$$Promise.reject = $$promise$reject$$default;
+  $$es6$promise$promise$$Promise.prototype = {
+    constructor: $$es6$promise$promise$$Promise,
+    /**
+          The primary way of interacting with a promise is through its `then` method,
+          which registers callbacks to receive either a promise's eventual value or the
+          reason why the promise cannot be fulfilled.
+    
+          ```js
+          findUser().then(function(user){
+            // user is available
+          }, function(reason){
+            // user is unavailable, and you are given the reason why
+          });
+          ```
+    
+          Chaining
+          --------
+    
+          The return value of `then` is itself a promise.  This second, 'downstream'
+          promise is resolved with the return value of the first promise's fulfillment
+          or rejection handler, or rejected if the handler throws an exception.
+    
+          ```js
+          findUser().then(function (user) {
+            return user.name;
+          }, function (reason) {
+            return 'default name';
+          }).then(function (userName) {
+            // If `findUser` fulfilled, `userName` will be the user's name, otherwise it
+            // will be `'default name'`
+          });
+    
+          findUser().then(function (user) {
+            throw new Error('Found user, but still unhappy');
+          }, function (reason) {
+            throw new Error('`findUser` rejected and we're unhappy');
+          }).then(function (value) {
+            // never reached
+          }, function (reason) {
+            // if `findUser` fulfilled, `reason` will be 'Found user, but still unhappy'.
+            // If `findUser` rejected, `reason` will be '`findUser` rejected and we're unhappy'.
+          });
+          ```
+          If the downstream promise does not specify a rejection handler, rejection reasons will be propagated further downstream.
+    
+          ```js
+          findUser().then(function (user) {
+            throw new PedagogicalException('Upstream error');
+          }).then(function (value) {
+            // never reached
+          }).then(function (value) {
+            // never reached
+          }, function (reason) {
+            // The `PedgagocialException` is propagated all the way down to here
+          });
+          ```
+    
+          Assimilation
+          ------------
+    
+          Sometimes the value you want to propagate to a downstream promise can only be
+          retrieved asynchronously. This can be achieved by returning a promise in the
+          fulfillment or rejection handler. The downstream promise will then be pending
+          until the returned promise is settled. This is called *assimilation*.
+    
+          ```js
+          findUser().then(function (user) {
+            return findCommentsByAuthor(user);
+          }).then(function (comments) {
+            // The user's comments are now available
+          });
+          ```
+    
+          If the assimliated promise rejects, then the downstream promise will also reject.
+    
+          ```js
+          findUser().then(function (user) {
+            return findCommentsByAuthor(user);
+          }).then(function (comments) {
+            // If `findCommentsByAuthor` fulfills, we'll have the value here
+          }, function (reason) {
+            // If `findCommentsByAuthor` rejects, we'll have the reason here
+          });
+          ```
+    
+          Simple Example
+          --------------
+    
+          Synchronous Example
+    
+          ```javascript
+          var result;
+    
+          try {
+            result = findResult();
+            // success
+          } catch(reason) {
+            // failure
+          }
+          ```
+    
+          Errback Example
+    
+          ```js
+          findResult(function(result, err){
+            if (err) {
+              // failure
+            } else {
+              // success
+            }
+          });
+          ```
+    
+          Promise Example;
+    
+          ```javascript
+          findResult().then(function(result){
+            // success
+          }, function(reason){
+            // failure
+          });
+          ```
+    
+          Advanced Example
+          --------------
+    
+          Synchronous Example
+    
+          ```javascript
+          var author, books;
+    
+          try {
+            author = findAuthor();
+            books  = findBooksByAuthor(author);
+            // success
+          } catch(reason) {
+            // failure
+          }
+          ```
+    
+          Errback Example
+    
+          ```js
+    
+          function foundBooks(books) {
+    
+          }
+    
+          function failure(reason) {
+    
+          }
+    
+          findAuthor(function(author, err){
+            if (err) {
+              failure(err);
+              // failure
+            } else {
+              try {
+                findBoooksByAuthor(author, function(books, err) {
+                  if (err) {
+                    failure(err);
+                  } else {
+                    try {
+                      foundBooks(books);
+                    } catch(reason) {
+                      failure(reason);
+                    }
+                  }
+                });
+              } catch(error) {
+                failure(err);
+              }
+              // success
+            }
+          });
+          ```
+    
+          Promise Example;
+    
+          ```javascript
+          findAuthor().
+            then(findBooksByAuthor).
+            then(function(books){
+              // found books
+          }).catch(function(reason){
+            // something went wrong
+          });
+          ```
+    
+          @method then
+          @param {Function} onFulfilled
+          @param {Function} onRejected
+          @param {String} label optional string for labeling the promise.
+          Useful for tooling.
+          @return {Promise}
+        */
+    then: function (onFulfillment, onRejection, label) {
+      var parent = this;
+      var state = parent._state;
+      if (state === $$$internal$$FULFILLED && !onFulfillment || state === $$$internal$$REJECTED && !onRejection) {
+        return this;
+      }
+      parent._onerror = null;
+      var child = new this.constructor($$$internal$$noop, label);
+      var result = parent._result;
+      if (state) {
+        var callback = arguments[state - 1];
+        $$asap$$default(function () {
+          $$$internal$$invokeCallback(state, child, callback, result);
+        });
+      } else {
+        $$$internal$$subscribe(parent, child, onFulfillment, onRejection);
+      }
+      return child;
+    },
+    /**
+          `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
+          as the catch block of a try/catch statement.
+    
+          ```js
+          function findAuthor(){
+            throw new Error('couldn't find that author');
+          }
+    
+          // synchronous
+          try {
+            findAuthor();
+          } catch(reason) {
+            // something went wrong
+          }
+    
+          // async with promises
+          findAuthor().catch(function(reason){
+            // something went wrong
+          });
+          ```
+    
+          @method catch
+          @param {Function} onRejection
+          @param {String} label optional string for labeling the promise.
+          Useful for tooling.
+          @return {Promise}
+        */
+    'catch': function (onRejection, label) {
+      return this.then(null, onRejection, label);
+    }
+  };
+  var $$es6$promise$polyfill$$default = function polyfill() {
+    var local;
+    if (typeof global !== 'undefined') {
+      local = global;
+    } else if (typeof window !== 'undefined' && window.document) {
+      local = window;
+    } else {
+      local = self;
+    }
+    var es6PromiseSupport = 'Promise' in local && // Some of these methods are missing from
+    // Firefox/Chrome experimental implementations
+    'resolve' in local.Promise && 'reject' in local.Promise && 'all' in local.Promise && 'race' in local.Promise && function () {
+      var resolve;
+      new local.Promise(function (r) {
+        resolve = r;
+      });
+      return $$utils$$isFunction(resolve);
+    }();
+    if (!es6PromiseSupport) {
+      local.Promise = $$es6$promise$promise$$default;
+    }
+  };
+  var es6$promise$umd$$ES6Promise = {
+    Promise: $$es6$promise$promise$$default,
+    polyfill: $$es6$promise$polyfill$$default
+  };
+  /* global define:true module:true window: true */
+  if (true) {
+    es6_promise = function () {
+      return es6$promise$umd$$ES6Promise;
+    }();
+  } else if (typeof module !== 'undefined' && module['exports']) {
+    module['exports'] = es6$promise$umd$$ES6Promise;
+  } else if (typeof this !== 'undefined') {
+    this['ES6Promise'] = es6$promise$umd$$ES6Promise;
+  }
+}.call(this));
+util_promise = function (promise) {
+  return promise.Promise;
+}(es6_promise);
+util_badger = function (Promise) {
+  /**
+   * Badger a function until it yields (a non-undefined value)
+   * @param {function} func A function to badger.
+   * @param {number} interval Number of milliseconds between badgering.
+   * @returns {Promise} that's resolved when func returns a non-undefined value.
+   */
+  function badger(func, interval) {
+    return new Promise(function (resolve) {
+      var timer;
+      function peek() {
+        var result = func();
+        if (result !== undefined) {
+          clearInterval(timer);
+          resolve(result);
+        }
+      }
+      timer = setInterval(peek, interval);
+      peek();
+    });
+  }
+  return badger;
+}(util_promise);
+util_window = function () {
+  return window;
+}();
+reporters_firstPaint = function (badger, Promise, window) {
+  /**
+   * Create a report containing the time to first paint
+   * @param {Transition} transition
+   * @returns {Promise<{firstPaint: number}>|{}}
+   */
+  function firstPaint(transition) {
+    if (!transition.isInitial) {
+      return {};
+    }
+    return firstPaintReady().then(function (firstPaint) {
+      return { firstPaint: firstPaint };
+    }, function () {
+      return {};
+    });
+  }
+  /**
+   * @returns {Boolean} true if the Chrome first paint metrics is available
+   */
+  function hasChromeFirstPaint() {
+    return window.chrome && window.chrome.loadTimes;
+  }
+  /**
+   * @returns {Boolean} true if the IE first paint metrics is available
+   */
+  function hasIEFirstPaint() {
+    return typeof window.performance.timing.msFirstPaint !== 'undefined';
+  }
+  /**
+   * If the first paint time has become available, return it
+   * @returns {number}
+   */
+  function getFirstPaint() {
+    if (hasChromeFirstPaint() && window.chrome.loadTimes().firstPaintTime > 0) {
+      return window.chrome.loadTimes().firstPaintTime * 1000 - window.performance.timing.navigationStart;
+    } else if (hasIEFirstPaint() && window.performance.timing.msFirstPaint > 0) {
+      return window.performance.timing.msFirstPaint - window.performance.timing.navigationStart;
+    }
+  }
+  /**
+   * @returns {Promise} which resolves when the first paint time becomes available
+   */
+  function firstPaintReady() {
+    if (hasChromeFirstPaint() || hasIEFirstPaint()) {
+      return badger(getFirstPaint, 250);
+    } else {
+      return Promise.reject('The browser does not have a first paint metric');
+    }
+  }
+  return firstPaint;
+}(util_badger, util_promise, util_window);
+reporters_isInitial = function isInitial(transition) {
+  return { isInitial: transition.isInitial };
+};
+reporters_journeyId = function (Promise, window) {
+  var storageKey = 'browser-metrics-journey';
+  function randomJourneyId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = window.Math.random() * 16 | 0;
+      var v = c === 'x' ? r : r & 3 | 8;
+      return v.toString(16);
+    });
+  }
+  /**
+   * Generates Journey ID or takes the existing one from the sessionStorage
+   *
+   * Due to the different implementations of sessionStorage across browsers, on Internet Explorer journey will include
+   * pages that are opened in a new window or tab. On other browsers opening a page in a new window or tab will cause
+   * a new journey to be created.
+   *
+   * @returns {Promise<{journeyId: string}>}
+   */
+  function journeyId() {
+    if (typeof window.sessionStorage === 'undefined') {
+      return Promise.reject('sessionStorage is required to produce a report for this transition.');
+    }
+    if (window.sessionStorage.getItem(storageKey) === null) {
+      window.sessionStorage.setItem(storageKey, randomJourneyId());
+    }
+    return Promise.resolve({ journeyId: window.sessionStorage.getItem(storageKey) });
+  }
+  return journeyId;
+}(util_promise, util_window);
+reporters_key = function () {
+  /**
+   * Produce a report containing a key identifying the type of transition.
+   *
+   * @param {Transition} transition
+   * @returns {{key: string}}
+   */
+  function key(transition) {
+    return { key: transition.key };
+  }
+  return key;
+}();
+util_supports_navigation_timing = function (window) {
+  return function supportsNavigationTiming() {
+    return window.performance && window.performance.navigation && window.performance.timing && typeof window.performance.timing.navigationStart !== 'undefined';
+  };
+}(util_window);
+reporters_navigationType = function (window, supportsNavigationTiming) {
+  /**
+   * Produce a report describing the way the browser arrived at the page.
+   *
+   * On supported browsers, a `navigationType` property is added, which is taken verbatim from
+   * window.performance.navigation.type.
+   *
+   * @param {Transition} transition
+   * @returns {{navigationType?: number}}
+   */
+  function navigationType(transition) {
+    var report = {};
+    if (transition.isInitial && supportsNavigationTiming()) {
+      report.navigationType = window.performance.navigation.type;
+    }
+    return report;
+  }
+  return navigationType;
+}(util_window, util_supports_navigation_timing);
+reporters_redirectCount = function (Promise, supportsNavigationTiming, window) {
+  /**
+   * Create a report with the number of redirects (if non-zero) that occurred.
+   * @param {Transition} transition
+   * @returns {Promise<{redirectCount?: number}>}
+   */
+  function redirectCount(transition) {
+    var report = {};
+    if (transition.isInitial) {
+      if (!supportsNavigationTiming()) {
+        return Promise.reject('The navigation timing API is required to produce a report for this transition.');
+      }
+      if (typeof window.performance.navigation.redirectCount !== 'undefined') {
+        report.redirectCount = window.performance.navigation.redirectCount;
+      }
+    }
+    return Promise.resolve(report);
+  }
+  return redirectCount;
+}(util_promise, util_supports_navigation_timing, util_window);
+util_absolutise_url = function (window) {
+  /**
+   * Make a URL absolute to the current document location.
+   *
+   * @param {string} url A URL to make absolute to the current document base URI.
+   * @returns {string}
+   *
+   * @example
+   *   > window.document.baseURI
+   *   "http://example.com/bar?baz"
+   *   > absolutiseUrl("/foo")
+   *   "http://example.com/foo"
+   *   > absolutiseUrl("//example2.pl/bar")
+   *   "http://example2.pl/bar"
+   */
+  function absolutiseUrl(url) {
+    var a = window.document.createElement('a');
+    a.href = url;
+    return a.href;
+  }
+  return absolutiseUrl;
+}(util_window);
+util_is_function = function isFunction(value) {
+  return typeof value === 'function';
+};
+util_performance = function (window) {
+  return window.performance;
+}(util_window);
+util_on_resource_timing_buffer_full = function (isFunction, performance) {
+  function noop() {
+  }
+  /**
+   * Browser support for performance.onresourcetimingbufferfull is a bit haphazard. This function encapsulates the
+   * awkwardness.
+   */
+  return function onResourceTimingBufferFull(callback) {
+    var existingHandler = performance.onresourcetimingbufferfull || noop;
+    if (isFunction(performance.addEventListener)) {
+      performance.addEventListener('resourcetimingbufferfull', callback);
+    } else {
+      performance.onresourcetimingbufferfull = function () {
+        callback();
+        existingHandler();
+      };
+    }
+  };
+}(util_is_function, util_performance);
+util_supports_resource_timing = function (isFunction, performance) {
+  return function supportsResourceTiming() {
+    return performance && isFunction(performance.getEntriesByType);
+  };
+}(util_is_function, util_performance);
+util_recent_resource_timing = function (isFunction, onResourceTimingBufferFull, performance, supportsResourceTiming) {
+  // This module provides a wrapper over the Resource Timing API in order to avoid needing an unbounded buffer for
+  // capturing resource timing data. A feature of browser-metrics is the "resourceTiming" report attribute that
+  // describes the resources that were requested during a transition.
+  //
+  // A problem arises when dealing with single page applications, because there's an unbounded number of resources
+  // that may be requested during the lifetime of a single browser session. To avoid eventually running out of 
+  // memory, the resource timing specification uses a fixed length buffer (see 
+  // http://www.w3.org/TR/resource-timing/#dom-performance-setresourcetimingbuffersize), however this means that at some
+  // point resource timing data will eventually be lost (once the buffer is full, data is dropped).
+  //
+  // To work around this, a circular-buffer inspired solution (which makes available at most twice the number of items
+  // as the Resource Timing buffer) is employed. One caveat is that this implementation requires that it takes ownership
+  // of the `performance.clearResourceTiming` API (i.e. no other code should call this function). On some browsers 
+  // this API is not available, which causes the behaviour to revert to the original "fixed-length-then-drop-data" behaviour.
+  var previousBuffer = [];
+  if (!supportsResourceTiming()) {
+    return function () {
+      return [];
+    };
+  }
+  function peek() {
+    return performance.getEntriesByType('resource').filter(function (entry) {
+      return entry.initiatorType !== 'img';
+    });
+  }
+  function attemptDrain() {
+    // If we can't actually clear the resource timings, we don't want to fill previousBuffer. Note that this doesn't
+    // remove marks or measures, there are other APIs to remove those.
+    if (isFunction(performance.clearResourceTimings)) {
+      previousBuffer = peek();
+      performance.clearResourceTimings();
+    }
+  }
+  // It's possible that the buffer is already full.
+  attemptDrain();
+  onResourceTimingBufferFull(attemptDrain);
+  /**
+   * Returns an array of at least `resourceTimingBufferSize` of the most recent PerformanceResourceTiming entries
+   * (excluding images).
+   *
+   * @returns {Array.<PerformanceResourceTiming>}
+   */
+  function recentResourceTiming() {
+    return previousBuffer.concat(peek());
+  }
+  return recentResourceTiming;
+}(util_is_function, util_on_resource_timing_buffer_full, util_performance, util_supports_resource_timing);
+util_relative_navigation_timing = function (badger, Promise, supportsNavigationTiming, performance) {
+  var timing = performance.timing;
+  var timingPropertyNames = 'unloadEventStart,unloadEventEnd,redirectStart,redirectEnd,fetchStart,domainLookupStart,domainLookupEnd,connectStart,connectEnd,secureConnectionStart,requestStart,responseStart,responseEnd,domLoading,domInteractive,domContentLoadedEventStart,domContentLoadedEventEnd,domComplete,loadEventStart,loadEventEnd'.split(',');
+  function relativeTimings() {
+    var hasFinishedLoading = timing.loadEventEnd > 0;
+    var timings = {};
+    if (hasFinishedLoading) {
+      timingPropertyNames.forEach(function storeRelativeValue(propertyName) {
+        var value = timing[propertyName];
+        var hasMeasurement = value > 0;
+        if (hasMeasurement) {
+          timings[propertyName] = value - timing.navigationStart;
+        }
+      });
+      return timings;
+    }
+  }
+  var cachedBadger;
+  /**
+   * @typedef {{unloadEventStart?: number, unloadEventEnd?: number, redirectStart?: number, redirectEnd?: number, fetchStart?: number, domainLookupStart?: number, domainLookupEnd?: number, connectStart?: number, connectEnd?: number, secureConnectionStart?: number, requestStart?: number, responseStart?: number, responseEnd?: number, domLoading?: number, domInteractive?: number, domContentLoadedEventStart?: number, domContentLoadedEventEnd?: number, domComplete?: number, loadEventStart?: number, loadEventEnd?: number}} RelativeNavigationTimings
+   */
+  /**
+   * Make a plain object copy of window.performance.timing, since some browsers don't make that object
+   * enumerable, and make it relative to navigationStart rather than UNIX epoch.
+   * @returns {Promise<RelativeNavigationTimings>}
+   */
+  function relativeNavigationTiming() {
+    if (!supportsNavigationTiming()) {
+      return Promise.reject('The navigation timing API is required to produce a report for this transition.');
+    }
+    if (typeof cachedBadger === 'undefined') {
+      cachedBadger = badger(relativeTimings, 250);
+    }
+    return cachedBadger;
+  }
+  return relativeNavigationTiming;
+}(util_badger, util_promise, util_supports_navigation_timing, util_performance);
+util_initial_blocking_resource_timing = function (absolutiseUrl, recentResourceTiming, relativeNavigationTiming, window) {
+  /**
+   * Returns the absolute URLs of all external async scripts.
+   *
+   * @returns Array<string>
+   */
+  function getExternalNonBlockingScriptUrls() {
+    var externalScripts = window.document.querySelectorAll('script[src][async]');
+    return Array.prototype.map.call(externalScripts, function (script) {
+      return absolutiseUrl(script.src);
+    });
+  }
+  /**
+   * Return an array of PerformanceResourceTiming entries that correspond to resources that blocked the
+   * DOMContentLoaded event from being emitted.
+   *
+   * If this information is unavailable (e.g. navigation timing or resource timing is unavailable, then return a
+   * rejected promise).
+   *
+   * @returns Promise<PerformanceResourceTiming[]>
+   */
+  function getInitialBlockingResourceTiming() {
+    var externalNonBlockingScriptUrls = getExternalNonBlockingScriptUrls();
+    /**
+     * @param {RelativeNavigationTimings} relativeTimings A map of relative navigation timing values.
+     */
+    function filter(relativeTimings) {
+      // We assume that (non-async) JavaScript and CSS resources that _finish before_ domContentLoadedEventStart
+      // were blocking the initial page load, and so we're interested in those.
+      return recentResourceTiming().filter(function isResourceJsOrCss(resource) {
+        return resource.initiatorType === 'link' || resource.initiatorType === 'script';
+      }).filter(function isBlockingResource(resource) {
+        return resource.responseEnd < relativeTimings.domContentLoadedEventStart;
+      }).filter(function isBlockingIfScript(resource) {
+        return resource.initiatorType !== 'script' || externalNonBlockingScriptUrls.indexOf(resource.name) === -1;
+      });
+    }
+    return relativeNavigationTiming().then(filter);
+  }
+  return getInitialBlockingResourceTiming;
+}(util_absolutise_url, util_recent_resource_timing, util_relative_navigation_timing, util_window);
+reporters_resourceLoadedEnd = function (initialBlockingResourceTiming) {
+  /**
+   * @typedef {{resourceLoadedEnd: number|null}} ResourceLoadedEndReport
+   */
+  /**
+   * Creates a report containing the time the last blocking resource finished loading
+   *
+   * @param {Transition} transition
+   * @returns {Promise<{ResourceLoadedEndReport}>|{}}
+   */
+  function resourceLoadedEnd(transition) {
+    if (!transition.isInitial) {
+      return {};
+    }
+    return initialBlockingResourceTiming().then(function makeReport(resources) {
+      if (resources.length === 0) {
+        return { resourceLoadedEnd: null };
+      }
+      var resourceLoadedEnd = resources.map(function toResponseEnd(resource) {
+        return resource.responseEnd;
+      }).reduce(function toMax(a, b) {
+        return Math.max(a, b);
+      });
+      return {
+        // The last responseEnd of early resources.
+        resourceLoadedEnd: resourceLoadedEnd
+      };
+    });
+  }
+  return resourceLoadedEnd;
+}(util_initial_blocking_resource_timing);
+reporters_resourceTiming = function (supportsResourceTiming, recentResourceTiming) {
+  // "…".split() is a micro optimisation to page weight.
+  var attributesToCopy = 'duration,initiatorType,name'.split(',');
+  var attributesRelativeToTransitionStart = 'startTime,connectEnd,connectStart,domainLookupEnd,domainLookupStart,fetchStart,redirectEnd,redirectStart,requestStart,responseEnd,responseStart,secureConnectionStart'.split(',');
+  /**
+   * @typedef {Object} ResourceTimingReport
+   * @property {number} resourceTiming.connectEnd
+   * @property {number} resourceTiming.connectStart
+   * @property {number} resourceTiming.domainLookupEnd
+   * @property {number} resourceTiming.domainLookupStart
+   * @property {number} resourceTiming.duration
+   * @property {number} resourceTiming.fetchStart
+   * @property {number} resourceTiming.initiatorType
+   * @property {string} resourceTiming.name
+   * @property {number} resourceTiming.redirectEnd
+   * @property {number} resourceTiming.redirectStart
+   * @property {number} resourceTiming.requestStart
+   * @property {number} resourceTiming.responseEnd
+   * @property {number} resourceTiming.responseStart
+   * @property {number} resourceTiming.secureConnectionStart
+   * @property {number} resourceTiming.startTime
+   */
+  /**
+   * Creates a report containing resource timing for resources that were loaded (requested and received) during
+   * the transition.
+   *
+   * If the browser does not support resource timing, an empty report is returned.
+   *
+   * @param {Transition} transition
+   * @returns {ResourceTimingReport|{}}
+   */
+  function resourceTiming(transition) {
+    if (!supportsResourceTiming()) {
+      return {};
+    }
+    var resources = recentResourceTiming().filter(function loadedDuringTransition(entry) {
+      return entry.responseEnd >= transition.start && entry.responseEnd <= transition.end;
+    });
+    return {
+      resourceTiming: resources.map(function (resource) {
+        var resourceReport = {};
+        attributesToCopy.forEach(function (attribute) {
+          resourceReport[attribute] = resource[attribute];
+        });
+        attributesRelativeToTransitionStart.forEach(function (attribute) {
+          resourceReport[attribute] = resource[attribute] > 0 ? resource[attribute] - transition.start : 0;
+        });
+        return resourceReport;
+      })
+    };
+  }
+  return resourceTiming;
+}(util_supports_resource_timing, util_recent_resource_timing);
+reporters_threshold = function () {
+  /**
+   * Produce a report containing the threshold of a transition.
+   *
+   * @param {Transition} transition
+   * @returns {{threshold: number}}
+   */
+  function key(transition) {
+    return { threshold: transition.threshold };
+  }
+  return key;
+}();
+reporters_timing = function (relativeNavigationTiming) {
+  /**
+   * For an initial transition create a report containing the navigation timing data from the browser.
+   * @param {Transition} transition
+   * @returns {Promise<RelativeNavigationTimings>|{}}
+   */
+  function timing(transition) {
+    if (!transition.isInitial) {
+      return {};
+    }
+    return relativeNavigationTiming();
+  }
+  return timing;
+}(util_relative_navigation_timing);
+reporters_userAgent = function (window) {
+  /**
+   * Creates a report containing the browser's user agent.
+   * @returns {{userAgent: string}}
+   */
+  function userAgent() {
+    return { userAgent: window.navigator.userAgent };
+  }
+  return userAgent;
+}(util_window);
+reporters_userTiming = function (isFunction, performance) {
+  /**
+   * @typedef {Object} UserTimingMark
+   * @property {string} name
+   * @property {number} time
+   */
+  /**
+   * @typedef {Object} UserTimingMeasure
+   * @property {string} name
+   * @property {number} duration
+   * @property {number} startTime
+   */
+  /**
+   * @typedef {Object} UserTimingReport
+   * @property {Array<UserTimingMark>} marks
+   * @property {Array<UserTimingMeasure> measures
+   */
+  /**
+   * Creates a report containing user timing marks that occurred during the transition.
+   *
+   * If the browser does not support resource timing, an empty report is returned.
+   *
+   * @param {Transition} transition
+   * @returns {UserTimingReport|{}}
+   */
+  function userTiming(transition) {
+    if (!performance || !isFunction(performance.getEntriesByType)) {
+      return {};
+    }
+    var marks = performance.getEntriesByType('mark').filter(function (mark) {
+      return mark.startTime >= transition.start && mark.startTime <= transition.end;
+    });
+    var measures = performance.getEntriesByType('measure').filter(function (measure) {
+      return measure.startTime >= transition.start && measure.startTime + measure.duration <= transition.end;
+    });
+    return {
+      marks: marks.map(function (mark) {
+        return {
+          name: mark.name,
+          time: mark.startTime - transition.start
+        };
+      }),
+      measures: measures.map(function (measure) {
+        return {
+          name: measure.name,
+          startTime: measure.startTime - transition.start,
+          duration: measure.duration
+        };
+      })
+    };
+  }
+  return userTiming;
+}(util_is_function, util_performance);
+reporters = function (apdexReporter, firstPaintReporter, isInitialReporter, journeyIdReporter, keyReporter, navigationTypeReporter, readyForUserReporter, redirectCountReporter, resourceLoadedEndReporter, resourceTimingsReporter, thresholdReporter, timingReporter, userAgentReporter, userTimingReporter) {
+  /**
+   * @typedef {Function} Reporter
+   * @param {Transition} transition A description of the transition that has just occurred.
+   * @returns {Promise<object>|object} A hash of keys/values to contribute to the final analytics event.
+   */
+  var reporters = [
+    apdexReporter,
+    firstPaintReporter,
+    isInitialReporter,
+    journeyIdReporter,
+    keyReporter,
+    navigationTypeReporter,
+    readyForUserReporter,
+    redirectCountReporter,
+    resourceLoadedEndReporter,
+    resourceTimingsReporter,
+    thresholdReporter,
+    timingReporter,
+    userAgentReporter,
+    userTimingReporter
+  ];
+  return {
+    /**
+     * @returns {Array.<Reporter>}
+     */
+    get: function () {
+      return reporters.concat();
+    },
+    /**
+     * @param {Reporter} reporter
+     */
+    add: function (reporter) {
+      reporters.push(reporter);
+    }
+  };
+}(reporters_apdex, reporters_firstPaint, reporters_isInitial, reporters_journeyId, reporters_key, reporters_navigationType, reporters_readyForUser, reporters_redirectCount, reporters_resourceLoadedEnd, reporters_resourceTiming, reporters_threshold, reporters_timing, reporters_userAgent, reporters_userTiming);
+util_merge = function () {
+  // Performance and safety optimisation.
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  /**
+   * Merge two or more objects together to form another.
+   *
+   * This facilitates and encourages an immutable/functional style.
+   *
+   * @returns {{}}
+   */
+  function merge() {
+    var obj = {};
+    var source, prop;
+    for (var i = 0, length = arguments.length; i < length; i++) {
+      source = arguments[i];
+      for (prop in source) {
+        if (hasOwnProperty.call(source, prop)) {
+          obj[prop] = source[prop];
+        }
+      }
+    }
+    return obj;
+  }
+  return merge;
+}();
+util_log_error = function (window) {
+  /**
+   * Log an error using the best way possible for the current environment.
+   * @param {Error} error
+   */
+  function logError(error) {
+    // Firefox and Chrome support console.error() and e.stack, but downgrade for non-supporting browsers.
+    (window.console.error || window.console.log).call(window.console, error.stack || error);
+  }
+  return logError;
+}(util_window);
+build_report = function (badger, merge, Promise, window, logError, reporters) {
+  /**
+   * Normalises ES6 and jQuery promises down to ES6 promises.
+   *
+   * Non-promise values are converted to ES6 promises.
+   */
+  function asPromise(value) {
+    return Promise.all([value]).then(function (reports) {
+      return reports[0];
+    });
+  }
+  /**
+   * It's possible that some reports will be a rejected [jQuery] promise. In these cases we want to massage them
+   * into an empty report.
+   */
+  function transformRejectedPromiseToEmptyReport(report) {
+    return asPromise(report).then(null, function () {
+      return {};
+    });
+  }
+  /**
+   * @param {Transition} transition
+   * @returns {*}
+   */
+  function buildReport(transition) {
+    var pendingReports = reporters.get().map(function makeReport(reporter) {
+      var report;
+      try {
+        report = reporter(transition);
+      } catch (e) {
+        logError(e);
+        report = {};
+      }
+      return transformRejectedPromiseToEmptyReport(report);
+    });
+    return Promise.all(pendingReports).then(function mergeReports(reports) {
+      return merge.apply(undefined, reports);
+    });
+  }
+  return buildReport;
+}(util_badger, util_merge, util_promise, util_window, util_log_error, reporters);
+agent = function (Transition, reporters, buildReport) {
+  /**
+   * Responsible for watching events for start and end, and deducing from that transitions have occurred, and
+   * publishing reports when an transition ends and all reporters have contributed to the report.
+   */
+  function Agent() {
+    var currentTransition;
+    var subscribers = [];
+    var reports = [];
+    function onStart(options) {
+      currentTransition = new Transition(options);
+    }
+    function onEnd(options) {
+      if (currentTransition && currentTransition.key === options.key) {
+        currentTransition.end = options.timestamp;
+        buildReport(currentTransition).then(function (report) {
+          reports.push(report);
+          subscribers.forEach(function (subscriber) {
+            subscriber({ report: report });
+          });
+        });
+        currentTransition = null;
+      }
+    }
+    function onAddReporter(reporter) {
+      reporters.add(reporter);
+    }
+    function onSubscribe(subscriber) {
+      reports.forEach(function (report) {
+        subscriber({ report: report });
+      });
+      subscribers.push(subscriber);
+    }
+    return function on(event) {
+      if (event.start) {
+        onStart(event.start);
+      } else if (event.end) {
+        onEnd(event.end);
+      } else if (event.addReporter) {
+        onAddReporter(event.addReporter);
+      } else if (event.subscribe) {
+        onSubscribe(event.subscribe);
+      }
+    };
+  }
+  return Agent;
+}(transition, reporters, build_report);
+lib_probe = function (window) {
+  return window['browser-metrics'];
+}(util_window);
+index = function (Agent, probe) {
+  var agent = new Agent();
+  probe.delegateTo(agent);
+}(agent, lib_probe);
+}());
+        }
+    };
+});
+window["browser-metrics-plugin"].install(function (done) {
+    require(["internal/browser-metrics", "internal/browser-metrics-aa-beacon"], function (internal_browser_metrics, internal_browser_metrics_aa_beacon) {
+var lib_window = {}, lib_jquery = {}, impl_reporters_experiments = {}, impl_aa_beacon_report_marshallers_experiments = {}, lib_wrm = {}, impl_reporters_manifesto_hash = {}, impl_aa_beacon_report_marshallers_manifesto_hash = {}, impl_reporters_rack = {}, impl_aa_beacon_report_marshallers_rack = {}, impl_aa_beacon_url_cleaners_util_is_privacy_policy_safe_token = {}, impl_aa_beacon_url_cleaners_util_sanitise_query_string = {}, impl_aa_beacon_url_cleaners_util_remove_static_resource_hash = {}, impl_aa_beacon_url_cleaners_cloud_per_tenant_cdn = {}, impl_aa_beacon_url_cleaners_cloud_cross_tenant_cdn = {}, impl = {};
+lib_window = function (exports) {
+  var w = window;
+  return w;
+}(lib_window);
+lib_jquery = function (exports, window) {
+  var $;
+  try {
+    $ = window.require('jquery');
+  } catch (e) {
+    $ = window.jQuery;
+  }
+  return $;
+}(lib_jquery, lib_window);
+impl_reporters_experiments = function (exports, window, $) {
+  var experimentJavaScriptUrlPattern = /^(?:https?:)?\/\/[^\.]+\.cloudfront\.net\/p\/([^\/]+)\/main\.js$/;
+  function scripts() {
+    return Array.prototype.slice.call(window.document.getElementsByTagName('script'));
+  }
+  function experiments() {
+    var deferred = $.Deferred();
+    $(function determineExperimentEnrolment() {
+      var runningExperiments = [];
+      scripts().forEach(function (script) {
+        var src = script.getAttribute('src');
+        var matches = src && src.match(experimentJavaScriptUrlPattern);
+        if (matches && matches.length) {
+          var experimentHash = matches[1];
+          runningExperiments.push({
+            name: experimentHash,
+            async: script.async
+          });
+        }
+      });
+      deferred.resolve(runningExperiments);
+    });
+    return deferred.promise();
+  }
+  var pendingReport = experiments().pipe(function (experiments) {
+    return { experiments: experiments };
+  });
+  var reporter = function experimentsReporter() {
+    return pendingReport;
+  };
+  return reporter;
+}(impl_reporters_experiments, lib_window, lib_jquery);
+impl_aa_beacon_report_marshallers_experiments = function (exports) {
+  function isExperimentsReport(report) {
+    return Array.isArray(report['experiments']);
+  }
+  var experimentsMarshaller = function (report) {
+    if (isExperimentsReport(report)) {
+      return {
+        experiments: JSON.stringify(report.experiments.map(function (experiment) {
+          return [
+            experiment.name,
+            experiment.async ? 1 : 0
+          ];
+        }))
+      };
+    }
+  };
+  return experimentsMarshaller;
+}(impl_aa_beacon_report_marshallers_experiments);
+lib_wrm = function (exports, window) {
+  var wrm = window.WRM;
+  return wrm;
+}(lib_wrm, lib_window);
+impl_reporters_manifesto_hash = function (exports, WRM) {
+  var hash;
+  var getHash = function () {
+    hash = WRM.data.claim('com.atlassian.plugins.browser.metrics.browser-metrics-plugin:impl.manifesto-hash-data-provider') || '';
+    getHash = function () {
+      return hash;
+    };
+    return hash;
+  };
+  var reporter = function () {
+    return { manifestoHash: getHash() };
+  };
+  return reporter;
+}(impl_reporters_manifesto_hash, lib_wrm);
+impl_aa_beacon_report_marshallers_manifesto_hash = function (exports) {
+  function isManifestoHashReport(report) {
+    return typeof report['manifestoHash'] === 'string';
+  }
+  var manifestoHashMarshaller = function (report) {
+    if (isManifestoHashReport(report)) {
+      return { manifestoHash: report.manifestoHash };
+    }
+  };
+  return manifestoHashMarshaller;
+}(impl_aa_beacon_report_marshallers_manifesto_hash);
+impl_reporters_rack = function (exports, WRM) {
+  var rack;
+  var getRack = function () {
+    rack = WRM.data.claim('com.atlassian.plugins.browser.metrics.browser-metrics-plugin:impl.rack-data-provider') || '';
+    getRack = function () {
+      return rack;
+    };
+    return rack;
+  };
+  var reporter = function () {
+    return { rack: getRack() };
+  };
+  return reporter;
+}(impl_reporters_rack, lib_wrm);
+impl_aa_beacon_report_marshallers_rack = function (exports) {
+  function isRackReport(report) {
+    return typeof report['rack'] === 'string';
+  }
+  var rackMarshaller = function (report) {
+    if (isRackReport(report)) {
+      return { rack: report.rack };
+    }
+  };
+  return rackMarshaller;
+}(impl_aa_beacon_report_marshallers_rack);
+impl_aa_beacon_url_cleaners_util_is_privacy_policy_safe_token = function (exports) {
+  var regex = /^(true|false|\d+)$/gi;
+  var isPrivacyPolicySafeToken = function (value) {
+    return !!value.match(regex);
+  };
+  return isPrivacyPolicySafeToken;
+}(impl_aa_beacon_url_cleaners_util_is_privacy_policy_safe_token);
+impl_aa_beacon_url_cleaners_util_sanitise_query_string = function (exports, isPrivacyPolicySafeToken) {
+  var queryStringItemRegex = /([&?][^&=]+)(=?)([^&#]*)/g;
+  var sanitiseQueryString = function (url) {
+    return url.replace(queryStringItemRegex, function (match, name, equals, value) {
+      return name + equals + (isPrivacyPolicySafeToken(value) ? value : '\u2620');
+    });
+  };
+  return sanitiseQueryString;
+}(impl_aa_beacon_url_cleaners_util_sanitise_query_string, impl_aa_beacon_url_cleaners_util_is_privacy_policy_safe_token);
+impl_aa_beacon_url_cleaners_util_remove_static_resource_hash = function (exports) {
+  var staticResourceItemRegex = /(\/s\/).+(\/_\/)/;
+  var removeStaticResourceHash = function (url) {
+    return url.replace(staticResourceItemRegex, function (match, s, _) {
+      return s + '\u2620' + _;
+    });
+  };
+  return removeStaticResourceHash;
+}(impl_aa_beacon_url_cleaners_util_remove_static_resource_hash);
+impl_aa_beacon_url_cleaners_cloud_per_tenant_cdn = function (exports, sanitiseQueryString, removeStaticResourceHash) {
+  var cloudPerTenantUrlRegex = /^https:\/\/[^.]+\.cloudfront.net\/[^\/]+(\/wiki)?\/s\//g;
+  var cloudPerTenantCdnUrlFilter = function (url) {
+    if (url.match(cloudPerTenantUrlRegex)) {
+      url = sanitiseQueryString(url);
+      url = removeStaticResourceHash(url);
+      return url;
+    }
+    return '';
+  };
+  return cloudPerTenantCdnUrlFilter;
+}(impl_aa_beacon_url_cleaners_cloud_per_tenant_cdn, impl_aa_beacon_url_cleaners_util_sanitise_query_string, impl_aa_beacon_url_cleaners_util_remove_static_resource_hash);
+impl_aa_beacon_url_cleaners_cloud_cross_tenant_cdn = function (exports) {
+  var cloudCrossTenantUrlRegex = /^https:\/\/d2kryfvs3op226\.cloudfront\.net\/[a-f0-9]+\.[a-z]+$/g;
+  var cloudCrossTenantCdnUrlFilter = function (url) {
+    if (url.match(cloudCrossTenantUrlRegex)) {
+      return url;
+    }
+    return '';
+  };
+  return cloudCrossTenantCdnUrlFilter;
+}(impl_aa_beacon_url_cleaners_cloud_cross_tenant_cdn);
+impl = function (exports, metrics, aa, experimentsReporter, experimentsReportMarshaller, manifestoHashReporter, manifestoHashReportMarshaller, rackReporter, rackReportMarshaller, cloudPerTenantCdnUrlCleaner, cloudCrossTenantCdnUrlCleaner) {
+  var addReporter = metrics.addReporter;
+  var addReportMarshaller = aa.addReportMarshaller;
+  var addUrlCleaner = aa.addUrlCleaner;
+  addReporter(experimentsReporter);
+  addReporter(manifestoHashReporter);
+  addReporter(rackReporter);
+  addReportMarshaller(rackReportMarshaller);
+  addReportMarshaller(manifestoHashReportMarshaller);
+  addReportMarshaller(experimentsReportMarshaller);
+  addUrlCleaner(cloudPerTenantCdnUrlCleaner);
+  addUrlCleaner(cloudCrossTenantCdnUrlCleaner);
+  return exports;
+}(impl, internal_browser_metrics, internal_browser_metrics_aa_beacon, impl_reporters_experiments, impl_aa_beacon_report_marshallers_experiments, impl_reporters_manifesto_hash, impl_aa_beacon_report_marshallers_manifesto_hash, impl_reporters_rack, impl_aa_beacon_report_marshallers_rack, impl_aa_beacon_url_cleaners_cloud_per_tenant_cdn, impl_aa_beacon_url_cleaners_cloud_cross_tenant_cdn);        done();
+    });
+});;
+;
+/* module-key = 'com.atlassian.jira.plugins.jira-browser-metrics:contrib', location = 'contrib.js' */
+window["browser-metrics-plugin"].install(function (done) {
+    require(["internal/browser-metrics", "internal/browser-metrics-aa-beacon", "jquery"], function (internal_browser_metrics, internal_browser_metrics_aa_beacon, jquery) {
+var contrib_lib_window = {}, contrib_reporters_application_hash = {}, contrib_aa_beacon_report_marshallers_application_hash = {}, contrib_reporters_application_version = {}, contrib_aa_beacon_report_marshallers_application_version = {}, contrib_reporters_server_duration = {}, contrib_aa_beacon_report_marshallers_server_duration = {}, contrib_reporters_database_duration = {}, contrib_aa_beacon_report_marshallers_database_duration = {}, contrib = {};
+contrib_lib_window = function (exports) {
+  return window;
+}(contrib_lib_window);
+contrib_reporters_application_hash = function (exports, window) {
+  var dataKey = 'com.atlassian.jira.plugins.jira-browser-metrics:contrib.scm-commit-id';
+  var scmCommitId = window.WRM.data.claim(dataKey);
+  var report = scmCommitId ? { applicationHash: scmCommitId } : {};
+  var scmCommitIdReporter = function () {
+    return report;
+  };
+  return scmCommitIdReporter;
+}(contrib_reporters_application_hash, contrib_lib_window);
+contrib_aa_beacon_report_marshallers_application_hash = function (exports) {
+  function isApplicationHashReport(report) {
+    return typeof report['applicationHash'] === 'string';
+  }
+  var applicationHashMarshaller = function (report) {
+    if (isApplicationHashReport(report)) {
+      return { applicationHash: report.applicationHash };
+    }
+  };
+  return applicationHashMarshaller;
+}(contrib_aa_beacon_report_marshallers_application_hash);
+contrib_reporters_application_version = function (exports, $) {
+  var pendingReport = $.Deferred();
+  $(function () {
+    var metrics = {};
+    var version = $('meta[name=application-name]').data('version');
+    if (version) {
+      metrics['applicationHash'] = version;
+    }
+    pendingReport.resolve(metrics);
+  });
+  var applicationVersionReporter = function (transition) {
+    if (transition.isInitial) {
+      return pendingReport.promise();
+    }
+    return {};
+  };
+  return applicationVersionReporter;
+}(contrib_reporters_application_version, jquery);
+contrib_aa_beacon_report_marshallers_application_version = function (exports) {
+  function isApplicationVersionReport(report) {
+    return typeof report['applicationVersion'] === 'string';
+  }
+  var applicationVersionMarshaller = function (report) {
+    if (isApplicationVersionReport(report)) {
+      return { applicationVersion: report.applicationVersion };
+    }
+  };
+  return applicationVersionMarshaller;
+}(contrib_aa_beacon_report_marshallers_application_version);
+contrib_reporters_server_duration = function (exports, $) {
+  var pendingReport = $.Deferred();
+  function isNumberString(value) {
+    return '' + Number(value) === value;
+  }
+  $(function () {
+    var metrics = {};
+    var server = $('#jira_request_timing_info').find('[title=jira\\.request\\.server\\.time]').val();
+    if (server && isNumberString(server)) {
+      metrics['serverDuration'] = Number(server);
+    }
+    pendingReport.resolve(metrics);
+  });
+  var serverTimerReporter = function (transition) {
+    if (transition.isInitial) {
+      return pendingReport.promise();
+    }
+    return {};
+  };
+  return serverTimerReporter;
+}(contrib_reporters_server_duration, jquery);
+contrib_aa_beacon_report_marshallers_server_duration = function (exports) {
+  function isServerDurationReport(report) {
+    return typeof report['serverDuration'] === 'number';
+  }
+  var serverDurationMarshaller = function (report) {
+    if (isServerDurationReport(report)) {
+      return { serverDuration: '' + report.serverDuration };
+    }
+  };
+  return serverDurationMarshaller;
+}(contrib_aa_beacon_report_marshallers_server_duration);
+contrib_reporters_database_duration = function (exports, $) {
+  var pendingReport = $.Deferred();
+  function isNumberString(value) {
+    return '' + Number(value) === value;
+  }
+  $(function () {
+    var metrics = {};
+    var selector = '#jira_request_timing_info';
+    var dbReads = $(selector).find('[title=db\\.reads\\.time\\.in\\.ms]').val();
+    var dbConns = $(selector).find('[title=db\\.conns\\.time\\.in\\.ms]').val();
+    if (dbReads && isNumberString(dbReads)) {
+      metrics['dbReadsTimeInMs'] = Number(dbReads);
+    }
+    if (dbConns && isNumberString(dbConns)) {
+      metrics['dbConnsTimeInMs'] = Number(dbConns);
+    }
+    pendingReport.resolve(metrics);
+  });
+  var databaseTimeReporter = function (transition) {
+    if (transition.isInitial) {
+      return pendingReport.promise();
+    }
+    return {};
+  };
+  return databaseTimeReporter;
+}(contrib_reporters_database_duration, jquery);
+contrib_aa_beacon_report_marshallers_database_duration = function (exports) {
+  function isDatabaseDurationReport(report) {
+    return typeof report['dbReadsTimeInMs'] === 'number' || typeof report['dbConnsTimeInMs'] === 'number';
+  }
+  var databaseDurationMarshaller = function (report) {
+    if (isDatabaseDurationReport(report)) {
+      return {
+        dbReadsTimeInMs: '' + (report.dbReadsTimeInMs || ''),
+        dbConnsTimeInMs: '' + (report.dbConnsTimeInMs || '')
+      };
+    }
+  };
+  return databaseDurationMarshaller;
+}(contrib_aa_beacon_report_marshallers_database_duration);
+contrib = function (exports, applicationHashReporter, applicationHashReportMarshaller, applicationVersionReporter, applicationVersionReportMarshaller, serverDurationReporter, serverDurationReportMarshaller, databaseDurationReporter, databaseDurationReportMarshaller, metrics, aaBeacon) {
+  var addReporter = metrics.addReporter;
+  var addReportMarshaller = aaBeacon.addReportMarshaller;
+  addReporter(applicationHashReporter);
+  addReporter(applicationVersionReporter);
+  addReporter(databaseDurationReporter);
+  addReporter(serverDurationReporter);
+  addReportMarshaller(applicationHashReportMarshaller);
+  addReportMarshaller(applicationVersionReportMarshaller);
+  addReportMarshaller(databaseDurationReportMarshaller);
+  addReportMarshaller(serverDurationReportMarshaller);
+  return exports;
+}(contrib, contrib_reporters_application_hash, contrib_aa_beacon_report_marshallers_application_hash, contrib_reporters_application_version, contrib_aa_beacon_report_marshallers_application_version, contrib_reporters_server_duration, contrib_aa_beacon_report_marshallers_server_duration, contrib_reporters_database_duration, contrib_aa_beacon_report_marshallers_database_duration, internal_browser_metrics, internal_browser_metrics_aa_beacon);        done();
+    });
+});;

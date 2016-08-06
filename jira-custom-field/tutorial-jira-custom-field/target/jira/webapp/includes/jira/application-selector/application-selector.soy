@@ -1,0 +1,153 @@
+{namespace JIRA.Templates.ApplicationSelector}
+
+/**
+ * Application selector that is basically a list of checkboxes.
+ *
+ * @param? selectableApplications List of applications that can be selected.
+ * @param? legend Legend for the checkbox list.
+ * @param? showInfoMessages Boolean indicating if info icons for applications that are not selectable should be displayed. Defaults to true.
+ * @param? additionalClasses Additional classes passed added to fieldset
+ * @param? isEnabled Boolean indicating if whole application selector is enabled. Defaults to true.
+ * @param? enableSelectedDeselectableApps Boolean indicating if selected and disabled deselectable applications should be enabled. Defaults to false.
+ */
+{template .applicationSelector}
+    <fieldset class="{if isNonnull($additionalClasses)}{$additionalClasses}{/if} application-picker">
+        {if $legend}
+            <legend><span>{$legend}</span></legend>
+        {/if}
+        <div class="application-picker-applications">
+            {if $selectableApplications}
+                {foreach $application in $selectableApplications}
+                    {call .applicationCheckbox}
+                        {param application: $application /}
+                        {param showInfoMessages: $showInfoMessages /}
+                        {param isEnabled: $isEnabled /}
+                            {param enableSelectedDeselectableApps: $enableSelectedDeselectableApps /}
+                    {/call}
+                {/foreach}
+            {/if}
+        </div>
+    </fieldset>
+{/template}
+
+/**
+ * Checkbox for a single application
+ *
+ * @param application Application that can be selected.
+ * @param? showInfoMessages Boolean indicating if info icons for applications that are not selectable should be displayed. Defaults to true.
+ * @param? isEnabled Boolean indicating if application selector is enabled. Defaults to true.
+ * @param? enableSelectedDeselectableApps Boolean indicating if selected and disabled deselectable applications should be enabled. Defaults to false.
+ */
+{template .applicationCheckbox}
+    {let $enableSelectedDeselectableApplications: isNonnull($enableSelectedDeselectableApps)? $enableSelectedDeselectableApps : false /}
+    {let $isApplicationEnabled: isNonnull($isEnabled) ? $isEnabled : true /}
+    {let $isApplicationEnabled: $isApplicationEnabled == true and ($application.selectable != false or ($enableSelectedDeselectableApplications == true and $application.deselectable == true)) /}
+    {let $isApplicationCritical: $showInfoMessages != false and not $isApplicationEnabled /}
+    {let $randomId: randomInt(10000) /}
+    <div class="checkbox">
+        {if $isApplicationCritical}
+            {call aui.inlineDialog2.inlineDialog2}
+                {param id}inline-dialog2-{$application.key}-{$randomId}{/param}
+                {param alignment: 'right middle' /}
+                {param respondsTo: 'toggle' /}
+                {param extraClasses}application-picker-dialog application-warning-dialog application-warning-dialog-{$application.key}{/param}
+                {param content}
+                    {$application.messageMarkup|noAutoescape}
+                {/param}
+            {/call}
+            <a href="#" id="{$application.key}-{$randomId}" class="application application-warning application-warning-{$application.key} aui-icon aui-icon-warning"
+               aria-controls="inline-dialog2-{$application.key}-{$randomId}" data-key="{$application.key}" data-aui-trigger data-warning-id="inline-dialog2-{$application.key}-{$randomId}"></a>{sp}
+        {else}
+            {let $indeterminate}
+                {if $application.effectiveOfOtherApplication}
+                    effective
+                {elseif $application.indeterminate}
+                    indeterminate
+                {/if}
+            {/let}
+            {call aui.form.input}
+                {param type: 'checkbox' /}
+                {param id}{$application.key}-{$randomId}{/param}
+                {param name: 'selectedApplications' /}
+                {param value: $application.key /}
+                {param isChecked: $application.selected == true /}
+                {param isDisabled: not $isApplicationEnabled /}
+                {param extraClasses}application application-{$application.key} indeterminate-ie-fix{/param}
+                {param extraAttributes: [
+                    'data-key': $application.key,
+                    'data-defined': $application.defined,
+                    'data-effective': $application.effectiveApplicationsJson,
+                    'data-indeterminate': $indeterminate,
+                    'aria-controls': 'inline-dialog2-' + $application.key + '-not-defined-' + $randomId
+                ] /}
+            {/call}
+            {if not $application.defined}
+                {call .undefinedWarning}
+                    {param application: $application /}
+                    {param randomId: $randomId /}
+                {/call}
+            {/if}
+        {/if}
+        {call aui.form.label}
+            {param forField}{$application.key}-{$randomId}{/param}
+            {param content}
+                {if $application.displayName}
+                    {$application.displayName}
+                {else}
+                    {$application.name}
+                {/if}
+            {/param}
+            {param extraClasses: 'application-label'/}
+        {/call}
+        {if $application.effectiveApplications != null}
+            {call .effectiveWarning}
+                {param criticalApplication: $isApplicationCritical /}
+                {param application: $application/}
+            {/call}
+        {/if}
+    </div>
+{/template}
+
+/**
+ * Effective warning inline dialog
+ *
+ * @param application Application that can be selected.
+ * @param criticalApplication Is application critical.
+ */
+{template .effectiveWarning private="true"}
+    {let $safeName}{$application.name|escapeHtml}{/let}
+    {let $warningContent}
+        {if $criticalApplication}
+            {getText('admin.warn.user.shared.default.group.other.error', $safeName, '<a href="', contextPath(), '/secure/admin/ApplicationAccess.jspa">', '</a>')|noAutoescape}
+        {else}
+            {getText('admin.warn.user.shared.default.group.other', $safeName, '<a href="', contextPath(), '/secure/admin/ApplicationAccess.jspa">', '</a>')|noAutoescape}
+        {/if}
+    {/let}
+
+    {call aui.inlineDialog2.inlineDialog2}
+        {param id}{$application.key}-effective-warning{/param}
+        {param alignment: 'right middle' /}
+        {param respondsTo: 'toggle' /}
+        {param extraClasses}application-picker-dialog application-picker-applications__effective-warning {if $warningContent}critical-application{/if}{/param}
+        {param content: $warningContent /}
+    {/call}
+{/template}
+
+/**
+ * Undefined warning dialog
+ *
+ * @param application
+ * @param randomId
+ */
+{template .undefinedWarning private="true"}
+    {let $safeName}{$application.name|escapeHtml}{/let}
+    {call aui.inlineDialog2.inlineDialog2}
+        {param id}inline-dialog2-{$application.key}-not-defined-{$randomId}{/param}
+        {param alignment: 'right middle' /}
+        {param respondsTo: 'toggle' /}
+        {param extraClasses}application-picker-dialog application-not-defined-dialog application-not-defined-dialog-{$application.key}{/param}
+        {param content}
+            {getText('admin.errors.user.add.user.application.not.installed', $safeName, '<a href="' + contextPath() + '/plugins/servlet/applications/versions-licenses">', '</a>')|noAutoescape}
+        {/param}
+    {/call}
+{/template}

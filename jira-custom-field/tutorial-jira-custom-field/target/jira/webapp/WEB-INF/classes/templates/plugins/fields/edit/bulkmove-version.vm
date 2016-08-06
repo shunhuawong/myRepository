@@ -1,0 +1,53 @@
+#disable_html_escaping()
+#macro(bulkmoveVersionOptionGroup $versionOptions $groupTitleI18nKey $bulkMoveHelper $sourceVersionEntryValue)
+    #if ($versionOptions && !$versionOptions.empty)
+    <optgroup label="$i18n.getText($groupTitleI18nKey)">
+        #foreach ($option in $versionOptions)
+            <option value="$option.id"
+                    #if ($bulkMoveHelper.needsSelection($sourceVersionEntryValue, $option.id, $option.name))selected#end
+                    >
+                $option.name
+            </option>
+        #end
+    </optgroup>
+    #end
+#end
+#controlHeader ($action $customField.id $customField.name $fieldLayoutItem.required $displayParameters.noHeader)
+
+#if (($releasedVersion && !$releasedVersion.empty) || ($unreleasedVersion && !$unreleasedVersion.empty))
+<table class="blank">
+    #foreach ($sourceVersionEntry in $valuesToMap.entrySet())
+        #set ($sourceVersionEntryValue = $sourceVersionEntry.getValue())
+        #set ($sourceVersionName = $sourceVersionEntryValue.getValueName())
+        #set ($sourceProjectNameEscaped = $textutils.htmlEncode($sourceVersionEntryValue.getProjectName()))
+        #set ($sourceVersionId = $sourceVersionEntry.getKey())
+        <tr id="rowFor_${customField.id}_${sourceVersionId}">
+            <td width="1%" nowrap>#if ($sourceVersionName != '')$textutils.htmlEncode($sourceVersionName)#else $i18n.getText('common.filters.noversion')#end
+                #if ($sourceVersionId != $unknownVersionId)<small>[<strong>$i18n.getText('common.concepts.project'):</strong> $sourceProjectNameEscaped]</small>#end
+            </td>
+            <td width="1%">
+                <img src="${req.contextPath}/images/icons/arrow-move.svg" alt="?">
+            </td>
+            <td>
+                <select name="${customField.id}_${sourceVersionId}" id="${customField.id}_${sourceVersionId}">
+                    #if (!$fieldLayoutItem.required)
+                    <option value="-1">$i18n.getText('common.words.unknown')</option>
+                    #end
+                    #if ($unreleasedFirst == true)
+                        #bulkmoveVersionOptionGroup($unreleasedVersion, 'common.filters.unreleasedversions', $bulkMoveHelper, $sourceVersionEntryValue)
+                        #bulkmoveVersionOptionGroup($releasedVersion, 'common.filters.releasedversions', $bulkMoveHelper, $sourceVersionEntryValue)
+                    #else
+                        #bulkmoveVersionOptionGroup($releasedVersion, 'common.filters.releasedversions', $bulkMoveHelper, $sourceVersionEntryValue)
+                        #bulkmoveVersionOptionGroup($unreleasedVersion, 'common.filters.unreleasedversions', $bulkMoveHelper, $sourceVersionEntryValue)
+                    #end
+                </select>
+
+            </td>
+        </tr>
+    #end
+</table>
+#else
+    $i18n.getText('common.words.none')
+#end
+
+#controlFooter ($action $fieldLayoutItem.fieldDescription $displayParameters.noHeader)

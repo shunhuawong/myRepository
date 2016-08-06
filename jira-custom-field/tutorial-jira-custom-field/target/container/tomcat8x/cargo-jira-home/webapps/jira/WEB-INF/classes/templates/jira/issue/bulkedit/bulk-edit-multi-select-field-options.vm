@@ -1,0 +1,7 @@
+<select class="select" id="$fieldname" name="$fieldname">
+    #foreach ($option in $options.keySet())
+        <option class="imagebacked"#if ($option && $selected_option && $option == $selected_option) selected="selected"#end value="$option">
+            $options.get($option)
+        </option>
+    #end
+</select>

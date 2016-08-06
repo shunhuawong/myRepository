@@ -1,0 +1,3 @@
+com\example\plugins\tutorial\jira\customfields\api\MyPluginComponent.class
+com\example\plugins\tutorial\jira\customfields\MoneyCustomField.class
+com\example\plugins\tutorial\jira\customfields\impl\MyPluginComponentImpl.class

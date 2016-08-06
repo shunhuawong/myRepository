@@ -1,0 +1,20 @@
+{namespace JIRA.Templates.LandingPage}
+
+/**
+ *
+ * @param productName
+ * @param projectTypeKey
+ */
+{template .success}
+    {call aui.page.document}
+        {param pageType: 'focused' /}
+        {param pageSize: 'xlarge' /}
+        {param windowTitle: getText('welcome.to.jira', $productName) /}
+        {param headContent}
+            <meta name="decorator" content="onboarding" />
+        {/param}
+        {param content}
+            <span id="projectTypeKey" data-project-type-key="{$projectTypeKey}" />
+        {/param}
+    {/call}
+{/template}

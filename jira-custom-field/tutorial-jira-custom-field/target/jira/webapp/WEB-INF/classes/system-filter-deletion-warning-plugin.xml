@@ -1,0 +1,34 @@
+<atlassian-plugin key="jira.filter.deletion.warning" i18n-name-key="jira.filter.deletion.warning"
+                  name="Filter Deletion Warning Plugin">
+    <plugin-info>
+        <description key="jira.filter.deletion.warning.desc" />
+        <version>1.0</version>
+        <application-version min="4.0" max="4.0"/>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+    </plugin-info>
+
+    <web-resource key="soy-templates">
+        <dependency>com.atlassian.soy.soy-template-plugin:soy-deps</dependency>
+        <dependency>com.atlassian.auiplugin:aui-experimental-soy-templates</dependency>
+        <resource type="soy" name="filterDeletionWarningTemplate" location="templates/jira/issue/filter/filter-deletion-warning.soy"/>
+    </web-resource>
+    
+    <web-resource key="styles">
+        <transformation extension="less">
+            <transformer key="lessTransformer"/>
+        </transformation>
+        <resource type="download" name="filter-deletion-warning-dialog.css" location="/includes/jira/issue/filter/filter-deletion-warning.less">
+            <param name="source" value="webContextStatic"/>
+        </resource>
+    </web-resource>
+
+    <web-panel key="filter.subscription.warning.panel" location="atl.jira.filter.delete.warning" weight="100">
+        <resource name="view" type="soy" location=":soy-templates/JIRA.Templates.Issues.Filters.Warnings.subscriptionWarning"/>
+        <context-provider class="com.atlassian.jira.web.action.filter.FilterSubscriptionWarningContextProvider"/>
+    </web-panel>
+
+    <web-panel key="filter.favourite.warning.panel" location="atl.jira.filter.delete.warning" weight="120">
+        <resource name="view" type="soy" location=":soy-templates/JIRA.Templates.Issues.Filters.Warnings.favouriteWarning"/>
+        <context-provider class="com.atlassian.jira.web.action.filter.FilterFavouriteWarningContextProvider"/>
+    </web-panel>
+</atlassian-plugin>

@@ -1,0 +1,14 @@
+#disable_html_escaping()
+#if ($components && !$components.empty)
+    #if ($displayParams && $displayParams.nolink)
+        #foreach ($component in $components)
+            $textutils.htmlEncode($component.name)#commaonly($components)
+        #end
+    #else
+        #foreach ($component in $components)
+            <a href="$searchLinkGenerator.getComponentSearchLink($component)" class="tinylink">$textutils.htmlEncode($component.name)</a>#commaonly($components)
+        #end
+    #end
+#else
+    &nbsp;
+#end

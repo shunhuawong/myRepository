@@ -1,0 +1,1 @@
+jQuery.fn.hasFixedParent=function(){var hasFixedParent=false;this.parents().each(function(){if(AJS.$(this).css("position")==="fixed"){hasFixedParent=this;return false}});return hasFixedParent};

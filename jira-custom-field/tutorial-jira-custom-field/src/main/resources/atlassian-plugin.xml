@@ -18,9 +18,9 @@
     <resource type="download" name="images/" location="/images"/>
     <context>tutorial-jira-custom-field</context>
   </web-resource>
-  <customfield-type name="Money Custom Field" i18n-name-key="money-custom-field.name" key="money-custom-field" class="com.example.plugins.tutorial.jira.customfields.MoneyCustomField">
-    <description key="money-custom-field.description">The Money Custom Field Plugin</description>
-    <resource name="view" type="velocity" location="/templates/customfields/money-custom-field/view.vm"/>
-    <resource name="edit" type="velocity" location="/templates/customfields/money-custom-field/edit.vm"/>
+  <customfield-type name="Integer Custom Field" i18n-name-key="integer-custom-field.name" key="integer-custom-field" class="com.example.plugins.tutorial.jira.customfields.IntegerCustomField">
+    <description key="integer-custom-field.description">The Integer Custom Field Plugin</description>
+    <resource name="view" type="velocity" location="/templates/customfields/integer-custom-field/view.vm"/>
+    <resource name="edit" type="velocity" location="/templates/customfields/integer-custom-field/edit.vm"/>
   </customfield-type>
 </atlassian-plugin>

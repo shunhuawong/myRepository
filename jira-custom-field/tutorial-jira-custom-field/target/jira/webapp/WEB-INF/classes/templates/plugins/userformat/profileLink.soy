@@ -1,0 +1,22 @@
+{namespace JIRA.Templates.UserFormat}
+
+/**
+ * Simple user profile link template.
+ * @param id
+ * @param username
+ * @param fullName
+ * @param user
+ * @param defaultFullName
+ * @param baseUrl
+ */
+{template .profileLink}
+    {if $username}
+        {if $user}
+            <a class="user-hover" rel="{$username}" id="{$id}_{$username}" href="{$baseUrl}/secure/ViewProfile.jspa?name={$username |escapeUri}">{$fullName}</a>
+        {else}
+            {$username}
+        {/if}
+    {else}
+        {$defaultFullName}
+    {/if}
+{/template}

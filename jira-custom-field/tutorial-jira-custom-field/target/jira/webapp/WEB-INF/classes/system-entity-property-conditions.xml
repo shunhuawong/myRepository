@@ -1,0 +1,16 @@
+<atlassian-plugin name='Entity property conditions' key='system.entity.property.conditions' i18n-name-key="system.entity.property.conditions.name">
+
+    <plugin-info>
+        <description key="system.entity.property.conditions.desc">This plugin implement entity property webfragment conditions in JIRA.</description>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+        <version>1.0</version>
+    </plugin-info>
+
+    <entity-property-condition-helper key="userPropertyCondition" class="com.atlassian.jira.bc.user.property.UserPropertyConditionHelper" />
+    <entity-property-condition-helper key="issuePropertyCondition" class="com.atlassian.jira.bc.issue.properties.IssuePropertyConditionHelper" />
+    <entity-property-condition-helper key="projectPropertyCondition" class="com.atlassian.jira.bc.project.property.ProjectPropertyConditionHelper" />
+    <entity-property-condition-helper key="issueTypePropertyCondition" class="com.atlassian.jira.bc.issuetype.property.IssueTypePropertyConditionHelper" />
+    <entity-property-condition-helper key="commentPropertyCondition" class="com.atlassian.jira.bc.issue.comment.property.CommentPropertyConditionHelper" />
+    <entity-property-condition-helper key="dashboardItemPropertyCondition" class="com.atlassian.jira.bc.dashboard.item.property.DashboardItemPropertyConditionHelper" />
+
+</atlassian-plugin>

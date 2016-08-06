@@ -1,0 +1,1 @@
+AJS.namespace("JIRA.ProgressiveDataSet",null,require("aui/progressive-data-set"));

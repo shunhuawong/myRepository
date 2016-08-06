@@ -1,0 +1,12 @@
+{namespace JIRA.Templates.InlineActivityStream}
+
+/**
+* Render inline gadget version of activity stream
+* @param activityStreamUrl URL where the activity stream feed can be loaded from
+*/
+{template .renderGadget}
+    <div class="mod-header">
+        <h3>{getText('common.concepts.activity.stream')}</h3>
+    </div>
+    <inline-activity-stream data-url="{$activityStreamUrl}"></inline-activity-stream>
+{/template}

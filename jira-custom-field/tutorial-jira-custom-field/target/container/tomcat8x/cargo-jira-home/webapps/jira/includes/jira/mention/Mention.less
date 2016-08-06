@@ -1,0 +1,67 @@
+@import "../../../ui/imports/aui-colours";
+
+.flex-container() {
+    display: -moz-box;         // OLD - Firefox 19-
+    display: -ms-flexbox;      // IE 10
+    display: -webkit-flex;     // Chrome
+    display: flex;             // NEW, Spec - Opera 12.1, Firefox 20+
+
+    // http://stackoverflow.com/questions/12022288/how-to-keep-a-flex-item-from-overflowing-due-to-its-text
+    min-width: 0
+}
+
+.flex-item(@grow: 1, @shrink: 1, @basis: auto) {
+    -moz-box-flex: @grow @shrink @basis;         // OLD - Firefox 19-
+    -ms-flex: @grow @shrink @basis;              // IE 10
+    -webkit-flex: @grow @shrink @basis;          // Chrome
+    flex: @grow @shrink @basis;                  // NEW, Spec - Opera 12.1, Firefox 20+
+
+    min-width: 0;
+}
+
+.jira-mention-suggestion {
+    mark {
+        background-color: inherit;
+        color: inherit;
+        font-weight: bold;
+        text-decoration: underline;
+    }
+
+    .aui-list-item-link {
+        .flex-container();
+    }
+
+    .jira-mention-suggestion-user {
+        .flex-item;
+        display: block;
+        min-width: 30%;
+
+        // ellipsis on text:
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+
+        // needed for ie10: http://stackoverflow.com/questions/14664195/text-overflowellipsis-doesnt-work-on-ie
+        word-wrap: normal;
+    }
+
+
+    .jira-mention-issue-roles {
+        // align item to right and do not allow it to flex
+        .flex-item(@grow: 0; @shrink: 0);
+        display: block;
+
+        // align to the right of the flex container
+        margin-left: auto;
+    }
+
+    // SW-3471 Undo terrible CSS mistakes in JIRA Software that set a blanket text colour for active dropdown items.
+    // TODO: Remove when SW-3471 is completed.
+    &.active .jira-mention-issue-roles .aui-lozenge-complete {
+        color: @aui-color-status-complete-foreground;
+
+        &.aui-lozenge-subtle {
+            color: @aui-color-status-complete-foreground-subtle;
+        }
+    }
+}

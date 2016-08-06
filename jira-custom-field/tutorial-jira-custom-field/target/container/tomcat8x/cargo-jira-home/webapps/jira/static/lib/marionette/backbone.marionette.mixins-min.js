@@ -1,0 +1,1 @@
+(function(){var Backbone=require("backbone");var extensions={unwrapTemplate:function unwrapTemplate(){if(this.$el.parent().length){var children=this.$el.children();this.$el.replaceWith(children);this.setElement(children)}else{this.setElement(this.$el.children())}}};_.extend(Backbone.Marionette.View.prototype,extensions)})();

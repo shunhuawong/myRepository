@@ -1,0 +1,14 @@
+#disable_html_escaping()
+#if (!$avatarSize || $avatarSize.empty())
+    #set ($avatarSize = "small")
+#end
+
+#if ($user)
+<a class="user-hover$!{avatarCssClass}" id="$!{id}_${textutils.htmlEncode($username)}" rel="${textutils.htmlEncode($username)}" href="${baseurl}/secure/ViewProfile.jspa?name=${velocityhelper.urlencode($username)}">
+    #parse("/templates/plugins/userformat/avatarOnly.vm")
+</a>
+#else
+<span class="user-hover$!{avatarCssClass}" id="$!{id}_${textutils.htmlEncode($username)}" rel="$textutils.htmlEncode($username)">
+    #parse("/templates/plugins/userformat/avatarOnly.vm")
+</span>
+#end

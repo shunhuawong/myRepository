@@ -1,0 +1,10 @@
+#disable_html_escaping()
+#if ($priority.isPresent() && $iconurl.isPresent())
+    #if ($displayParams.textOnly)
+       $textutils.htmlEncode($!priority.get().nameTranslation, false)
+    #else
+        <img src="$iconurl.get()" height="16" width="16" border="0" align="absmiddle" alt="$textutils.htmlEncode($priority.get().getNameTranslation(), false)" title="$textutils.htmlEncode($priority.get().getNameTranslation(), false) - $textutils.htmlEncode($!priority.get().getDescTranslation(), false)">
+    #end
+#else
+    &nbsp;
+#end

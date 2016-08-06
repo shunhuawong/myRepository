@@ -1,0 +1,1 @@
+AJS.namespace("JIRA.Issue.AttachScreenshot");(function initializeAttachScreenshot(){AJS.EventQueue=AJS.EventQueue||[];AJS.$(document).on("click","#attach-screenshot",function(){AJS.EventQueue.push({name:"attach.screenshot.display",properties:{}})})})();

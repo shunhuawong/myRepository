@@ -1,0 +1,16 @@
+#disable_html_escaping()
+#if (!($displayParams && $displayParams.get('nolink')))
+    <a class="issue-link" data-issue-key="${issue.getKey()}" href="${requestContext.baseUrl}/browse/${issue.getKey()}">
+#end
+#if ($displayParams.textOnly)
+    $textutils.htmlEncode($!issuetype.nameTranslation, false)
+#else
+    #if ($iconurl.isPresent())
+        <img src="$iconurl.get()" height="16" width="16" border="0" align="absmiddle" alt="$textutils.htmlEncode($issuetype.getNameTranslation(), false)" title="$textutils.htmlEncode($issuetype.getNameTranslation(), false) - $textutils.htmlEncode($!issuetype.getDescTranslation(), false)">
+    #else
+        &nbsp;
+    #end
+#end
+#if (!($displayParams && $displayParams.get('nolink')))
+    </a>
+#end

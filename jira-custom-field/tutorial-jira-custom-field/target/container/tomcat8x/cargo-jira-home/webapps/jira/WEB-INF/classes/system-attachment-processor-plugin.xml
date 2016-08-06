@@ -1,0 +1,18 @@
+<atlassian-plugin name='JIRA Attachment Archive File Processors' key='jira.system.attachment.processors'>
+    <plugin-info>
+        <description key="jira.system.attachment.processors">This plugin defines all of the default attachment processors in JIRA.</description>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+        <version>1.0</version>
+    </plugin-info>
+
+    <attachment-processor key="zipAttachmentProcessor"
+                          i18n-name-key="admin.attachmentsettings.zip"
+                          i18n-description-key="admin.attachmentsettings.descriptions.zip"
+                          file-extension="zip"
+                          class="com.atlassian.jira.plugin.attachment.ZipAttachmentProcessor">
+
+        <extension>zip</extension>
+        <extension>jar</extension>
+    </attachment-processor>
+
+</atlassian-plugin>

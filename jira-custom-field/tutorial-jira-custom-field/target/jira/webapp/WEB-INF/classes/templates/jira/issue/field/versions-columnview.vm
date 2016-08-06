@@ -1,0 +1,14 @@
+#disable_html_escaping()
+#if ($versions && !$versions.empty)
+    #if (!$linkToBrowseFixFor || ($displayParams && (${displayParams.excel_view} || $displayParams.nolink)))
+        #foreach ($version in $versions)
+            $textutils.htmlEncode($version.name)#commaonly($versions)
+        #end
+    #else
+        #foreach ($version in $versions)
+            <a href="$searchLinkGenerator.getFixVersionSearchLink($version)" class="tinylink">$textutils.htmlEncode($version.name)</a>#commaonly($versions)
+        #end
+    #end
+#else
+    &nbsp;
+#end

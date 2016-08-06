@@ -1,0 +1,1 @@
+define("jira/data/local-storage",["jquery"],function(jQuery){if(typeof localStorage==="undefined"){localStorage={getItem:jQuery.noop,setItem:jQuery.noop,removeItem:jQuery.noop,clear:jQuery.noop}}return localStorage});

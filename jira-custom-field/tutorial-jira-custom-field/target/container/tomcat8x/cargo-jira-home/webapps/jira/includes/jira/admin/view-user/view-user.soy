@@ -1,0 +1,135 @@
+{namespace JIRA.Templates.Admin.ViewUser}
+
+/**
+ * @param selectableApplications
+ * @param isUserEditable
+ * @param displayName
+ * @param userGroups
+ * @param showNoAppsWarning
+ * @param token
+ * @param username
+ */
+{template .applicationsAndGroupsContent}
+    <form class="aui dont-default-focus">
+        <div class="mod-header view-user-header">
+            <h3>{getText('admin.viewuser.header.applications.and.groups')}</h3>
+        </div>
+        <div class="mod-content">
+            {if $showNoAppsWarning}
+                {call .viewUserNoApplicationsWarning}
+                    {param displayName: $displayName/}
+                {/call}
+            {/if}
+            <div class="aui-item item-details">
+                <dl>
+                    <dt>{getText('admin.viewuser.label.application.access')}:</dt>
+                    <dd id="application-roles">
+                        {call JIRA.Templates.ApplicationSelector.applicationSelector}
+                            {param selectableApplications: $selectableApplications/}
+                            {param isEnabled: $isUserEditable /}
+                            {param enableSelectedDeselectableApps: true /}
+                        {/call}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+        <div class="module view-user-module" data-userdata-group="user-groups" id="groups">
+            <div class="mod-header">
+                <div class="view-user-module__controls">
+                    <a class="aui-button trigger-dialog" id="editgroups_link" href="EditUserGroups!default.jspa?atl_token={$token|escapeUri}&amp;name={$username|escapeUri}">{getText('admin.viewuser.manage.groups')}</a>
+                </div>
+            </div>
+            <div class="mod-content">
+                {call .viewUserGroups}
+                    {param userGroups: $userGroups /}
+                {/call}
+            </div>
+        </div>
+    </form>
+{/template}
+
+/**
+ * @param userGroups list of groups user belongs to
+ */
+{template .viewUserGroups}
+    <table class="aui">
+        <thead>
+            <tr>
+                <th>{getText('admin.viewuser.group.name')}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {if isNonnull($userGroups) and length($userGroups) != 0}
+                {foreach $group in $userGroups}
+                    <tr data-group-name="{$group.name}">
+                        <td class="cell-type-key group-name">
+                            <a href="ViewGroup.jspa?name={$group.name|escapeUri}">{$group.name}</a>
+                        </td>
+                        <td class="group-labels">
+                            {foreach $label in $group.labels}
+                                {call JIRA.Templates.groupLabelLozenge}
+                                    {param label: $label /}
+                                {/call}
+                                {sp}
+                            {/foreach}
+                        </td>
+                    </tr>
+                {/foreach}
+            {else}
+                <tr>
+                    <td class="view-user-no-groups-warning">
+                        {getText('admin.viewuser.user.not.in.any.group')}
+                    </td>
+                </tr>
+            {/if}
+        </tbody>
+    </table>
+{/template}
+
+/**
+ * @param displayName display username about user that has groups assigned
+ */
+{template .viewUserNoGroupsWarning}
+    <div class="view-user-no-groups-warning">
+        {call JIRA.Templates.warningMsg}
+            {param msg}
+                <p>{getText('admin.viewuser.user.not.in.group', $displayName)}</p>
+            {/param}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * @param displayName display username about user that has groups assigned
+ */
+{template .viewUserNoApplicationsWarning private="true"}
+    <div class="view-user-no-applications-warning">
+        {call JIRA.Templates.warningMsg}
+            {param msg}
+                <p>{getText('admin.viewuser.user.not.in.application', $displayName)}</p>
+            {/param}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * Show error message while updating application roles
+ * @param? messages
+ * @param status
+ */
+{template .applicationAccessError}
+    {switch $status}
+        {case 401}
+            <p>{getText('admin.viewuser.error.rest.unauthorized')}</p>
+        {case 403}
+            <p>{getText('admin.viewuser.error.rest.forbidden')}</p>
+        {default}
+            {if isNonnull($messages) and length($messages) != 0}
+                {foreach $message in $messages}
+                    <p>{$message}</p>
+                {/foreach}
+            {else}
+                <p>{getText('rest.error.internal')}</p>
+            {/if}
+    {/switch}
+{/template}
