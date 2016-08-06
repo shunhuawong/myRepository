@@ -1,0 +1,138 @@
+{namespace JIRA.Templates.LicenseBanner}
+
+/**
+ * Renders a banner for license expiry.
+ * It shows if days < 2, it cannot be dismissed
+ *
+ * @param licenseId a license identifier
+ * @param days to license expiry
+ * @param mac the manage versions and licenses page.
+ * @param isEvaluation indicates if the offending license is evaluation
+ */
+{template .expiryBanner}
+    {let $renewTag}<a id="license-banner-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+
+    <div id="license-banner-content" data-days="{$days}" data-subscription="true" data-app-license="{$licenseId}">
+        {if $days < 0} //already expired
+            {getText('admin.license.banner.has.expired', $licenseId, -1*$days, $renewTag, $end)|noescape}
+        {elseif $days == 0} // Today
+            {if $isEvaluation}
+                {getText('admin.license.banner.expires.today.evaluation', $licenseId, $renewTag, $end)|noescape}
+            {else}
+                {getText('admin.license.banner.expires.today', $licenseId, $renewTag, $end)|noescape}
+            {/if}
+        {else} // Tomorrow
+            {if $isEvaluation}
+                {getText('admin.license.banner.expires.tomorrow.evaluation', $licenseId, $renewTag, $end)|noescape}
+            {else}
+                {getText('admin.license.banner.expires.tomorrow', $licenseId, $days, $renewTag, $end)|noescape}
+            {/if}
+        {/if}
+    </div>
+{/template}
+
+/**
+ * Renders a banner for multiple licenses' expiry.
+ * It shows if days < 2, it cannot be dismissed
+ *
+ * @param days to license expiry
+ * @param mac the manage applications page.
+ */
+{template .expiryBannerMultiple}
+    {let $renewTag}<a id="license-banner-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+
+    <div id="license-banner-content" data-days="{$days}" data-subscription="true" data-app-license="Multiple">
+        {if $days < 0}
+            {getText('admin.license.banner.has.expired.multiple', $renewTag, $end)|noescape}
+        {else}
+            {getText('admin.license.flag.soon.to.expire.multiple', $days, $renewTag, $end)|noescape}
+        {/if}
+    </div>
+{/template}
+
+/**
+ * Renders a flag for license maintenance expiry.
+ * Appears if days > 1, after that becomes a banner.
+ *
+ * @param licenseId a license identifier
+ * @param mac the manage applications page
+ * @param days to maintenance expiry.
+ * @param isEvaluation indicates if the offending license is evaluation
+ */
+{template .expiryFlag}
+    {let $renewTag}<a id="license-flag-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+    {let $later}<a href="#" id="license-flag-later">{/let}
+    {let $never}<a href="#" id="license-flag-never">{/let}
+    <div id="license-flag-content" data-days="{$days}" data-subscription="true" data-app-license="{$licenseId}">
+        {if $isEvaluation}
+            {getText('admin.license.flag.soon.to.expire.evaluation', $licenseId, $days, $renewTag, $end)|noescape}
+        {else}
+            {getText('admin.license.flag.soon.to.expire', $licenseId, $days, $renewTag, $end)|noescape}
+        {/if}
+    </div>
+{/template}
+
+/**
+ * Renders a flag for multiple licenses' maintenance expiry.
+ * Appears if days > 1, after that becomes a banner
+ *
+ * @param mac the manage applications page
+ * @param days to maintenance expiry.
+ */
+{template .expiryFlagMultiple}
+    {let $renewTag}<a id="license-flag-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+    {let $later}<a href="#" id="license-flag-later">{/let}
+    {let $never}<a href="#" id="license-flag-never">{/let}
+    <div id="license-flag-content" data-days="{$days}" data-subscription="true" data-app-license="Multiple">
+        {getText('admin.license.flag.soon.to.expire.multiple', $days, $renewTag, $end)|noescape}
+    </div>
+{/template}
+
+/**
+ * Renders a flag for license maintenance expiry.
+ *
+ * @param licenseId a license identifier
+ * @param mac the manage applications page
+ * @param days to maintenance expiry.
+ */
+{template .maintenanceFlag}
+    {let $renewTag}<a id="license-flag-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+    {let $later}<a href="#" id="license-flag-later">{/let}
+    {let $never}<a href="#" id="license-flag-never">{/let}
+    <div id="license-flag-content" data-days="{$days}" data-subscription="false" data-app-license="{$licenseId}">
+        {if $days < 0}
+            {getText('admin.license.banner.maintenance.has.expired', $licenseId, $renewTag, $end)|noescape}
+        {elseif $days == 0}
+            {getText('admin.license.flag.maintenance.will.expire.today', $licenseId, $renewTag, $end)|noescape}
+        {elseif $days == 1}
+            {getText('admin.license.flag.maintenance.will.expire.tomorrow', $licenseId, $renewTag, $end)|noescape}
+        {else}
+            {getText('admin.license.flag.maintenance.soon.to.expire', $licenseId, $days, $renewTag, $end)|noescape}
+        {/if}
+    </div>
+{/template}
+
+/**
+ * Renders a flag for multiple licenses' maintenance expiry.
+ *
+ * @param mac the manage applications page
+ * @param days to maintenance expiry.
+ */
+{template .maintenanceFlagMultiple}
+    {let $renewTag}<a id="license-flag-my-link" href="{$mac}">{/let}
+    {let $end}</a>{/let}
+    {let $later}<a href="#" id="license-flag-later">{/let}
+    {let $never}<a href="#" id="license-flag-never">{/let}
+    <div id="license-flag-content" data-days="{$days}" data-subscription="false" data-app-license="Multiple">
+        {if $days < 0}
+            {getText('admin.license.flag.maintenance.has.expired.multiple', $renewTag, $end)|noescape}
+        {else}
+            {getText('admin.license.flag.maintenance.soon.to.expire.multiple', $renewTag, $end)|noescape}
+        {/if}
+    </div>
+{/template}

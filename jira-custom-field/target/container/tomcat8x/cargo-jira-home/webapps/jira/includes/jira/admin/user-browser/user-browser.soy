@@ -1,0 +1,43 @@
+{namespace JIRA.Templates.Admin.UserBrowser}
+
+/**
+ * Content of new user(s) created flag on UserBrowser page.
+ *
+ * @param names names of newly created users.
+ */
+{template .userCreatedFlag}
+    {let $namesSize: length($names)/}
+
+    {if $namesSize > 0}
+        <span class="
+            {$namesSize == 1 ? 'user-created-flag-single': 'user-created-flag-multiple'}
+        "{sp}
+            {if $namesSize == 1}data-user-created="{$names[0]}"{/if}
+        >
+            {if $namesSize == 1}
+                {let $safeName}{$names[0]|escapeHtml}{/let}
+                {getText('admin.userbrowser.one.user.created', '<strong>', $safeName, '</strong>')|noAutoescape}
+            {else}
+                {getText('admin.userbrowser.multiple.users.created', length($names))}
+            {/if}
+        </span>
+    {/if}
+{/template}
+
+/**
+ * Renders post setup message for mail properties discovery dialog in browser users page.
+ * @param closeElementClass identifier of element that closes dialog
+ * @param actionElementClass class of clickable elements that perform real action
+ */
+{template .userBrowserEmailDiscovery}
+<p>
+    {getText('postsetup.userbrowser.emailpropsdiscovery.message')}
+</p>
+<p>
+    <a class="aui-button post-setup-action {$actionElementClass}" href="{contextPath()}/secure/admin/OutgoingMailServers.jspa">{getText('postsetup.emailpropsdiscovery.configure')}</a>
+    {sp}
+    {call JIRA.Templates.PostSetupLib.closeButton}
+        {param closeElementClass: $closeElementClass /}
+    {/call}
+</p>
+{/template}

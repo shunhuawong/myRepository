@@ -1,0 +1,1 @@
+define("jira/util/events",["jquery","exports"],function(jQuery,exports){var ctx=jQuery(document);exports.bind=function(types,data,fn){ctx.bind(types,data,fn)};exports.one=function(evt,handler){ctx.one(evt,handler)};exports.unbind=function(evt,handler){ctx.unbind(evt,handler)};exports.trigger=function(evt,args){ctx.trigger(evt,args)}});

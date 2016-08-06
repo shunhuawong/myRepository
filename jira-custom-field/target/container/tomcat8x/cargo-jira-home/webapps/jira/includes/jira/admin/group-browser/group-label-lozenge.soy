@@ -1,0 +1,13 @@
+{namespace JIRA.Templates}
+
+/**
+ * @param label a group label,"ADMIN", "JIRA CORE" etc.
+ */
+{template .groupLabelLozenge}
+    {call aui.lozenges.lozenge}
+        {param text: $label.text /}
+        {param title: $label.title /}
+        {param isSubtle: true /}
+        {param extraClasses: 'group-label-lozenge' /}
+    {/call}
+{/template}

@@ -1,0 +1,223 @@
+{namespace JIRA.Templates.Setup.Account}
+
+/**
+ * The setup page for logging in / registering new MAC account and retrieving evaluation licenses
+ *
+ * @param errorTextsJson the translated texts that will be used by views to display errors
+ * @param licenseFlagTextsJson the translated texts appearing on the flag confirming the license transfer
+ * @param productLicense
+ */
+{template .page}
+    {call JIRA.Templates.Setup.layout data="all"}
+        {param bodyClasses: 'jira-setup-account-page' /}
+        {param content}
+            {call .pageContent data="all"/}
+        {/param}
+    {/call}
+{/template}
+
+/**
+ * The setup page for logging in / registering new MAC account and retrieving evaluation licenses
+ *
+ * @param errorTextsJson the translated texts that will be used by views to display errors
+ * @param licenseFlagTextsJson the translated texts appearing on the flag confirming the license transfer
+ * @param productLicense
+ */
+{template .pageContent}
+    {let $formId: 'jira-setup-account' /}
+    {let $idPrefix: $formId + '-' /}
+
+    <div class='setup-account-view-container'>
+        {call aui.form.form}
+            {param action: 'SetupFinishing.jspa' /}
+            {param extraClasses: 'ajs-dirty-warning-exempt jira-setup-form jira-setup-account-form' /}
+            {param id: $formId /}
+            {param content}
+                <h2>{getText('setup.account.title')}</h2>
+                <p class="jira-setup-account-description">
+                    {getText('setup.account.description')}
+                </p>
+
+                <div class="jira-setup-account-contents" data-error-texts="{$errorTextsJson}" data-flag-texts="{$licenseFlagTextsJson}">
+                    <div class="jira-setup-account-form-login">
+                        {call .emailField data="all" /}
+                        {call .usernameField data="all" /}
+                        {call .passwordField data="all" /}
+                        {call .passwordRetypeField data="all" /}
+                    </div>
+                </div>
+
+                {call aui.form.input}
+                    {param id: 'jira-setup-account-email-hidden' /}
+                    {param name: 'email' /}
+                    {param type: 'hidden' /}
+                {/call}
+
+                {call aui.form.input}
+                    {param id: 'jira-setup-account-username-hidden' /}
+                    {param name: 'username' /}
+                    {param type: 'hidden' /}
+                {/call}
+
+                {call aui.form.input}
+                    {param id: 'jira-setup-account-password-hidden' /}
+                    {param name: 'password' /}
+                    {param type: 'hidden' /}
+                {/call}
+
+                {call aui.form.input}
+                    {param id: 'jira-setup-account-license-hidden' /}
+                    {param name: 'jiraLicense' /}
+                    {param type: 'hidden' /}
+                    {param value: $productLicense /}
+                {/call}
+
+                {call aui.form.buttons}
+                    {param extraClasses: 'jira-setup-account-buttons jira-setup-form-with-no-fields' /}
+                    {param content}
+                        {call aui.form.button}
+                            {param extraClasses: 'aui-button-primary' /}
+                            {param id: 'jira-setup-account-button-submit' /}
+                            {param text: getText('common.forms.next') /}
+                        {/call}
+                    {/param}
+                {/call}
+            {/param}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * The setup page reporting a problem with the license.
+ *
+ * @param licenseError
+ */
+{template .license}
+    {let $formId: 'jira-setup-account' /}
+    {let $idPrefix: $formId + '-' /}
+
+    {call JIRA.Templates.Setup.layout data="all"}
+        {param bodyClasses: 'jira-setup-account-license-error' /}
+        {param content}
+            <h2> {getText('setup.license.error.page.title')} </h2>
+
+            {let $linkEnd}</a>{/let}
+            {let $linkMac}<a href="https://my.atlassian.com/" target="_blank">{/let}
+            {let $linkSetup}<a href="{contextPath()}/secure/SetupMode!default.jspa">{/let}
+            {let $errorContent}
+                {getText('setup.license.error.content', $linkMac, $linkEnd, $linkSetup, $linkEnd)|noAutoescape}
+            {/let}
+
+            {call aui.message.error}
+                {param content: $errorContent /}
+                {param extraClasses: 'jira-setup-account-summary-message' /}
+                {param titleContent: $licenseError /}
+            {/call}
+        {/param}
+    {/call}
+{/template}
+
+
+/**
+ * Template for common email field
+ */
+{template .emailField}
+    {let $id: 'jira-setup-account-field-email' /}
+
+    <div class="field-group">
+        {call aui.form.label}
+            {param forField : $id /}
+            {param content : getText('setup.account.form.email') /}
+        {/call}
+        {call aui.form.input}
+            {param extraAttributes: [
+                'placeholder': getText('setup.account.form.email.placeholder')
+            ] /}
+            {param extraClasses: 'jira-setup-account-form-field' /}
+            {param id: $id /}
+            {param type: 'text' /}
+        {/call}
+        {call aui.form.fieldError}
+            {param extraClasses: 'hidden'/}
+            {param message: '' /}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * Template for common username field
+ */
+{template .usernameField}
+    {let $id: 'jira-setup-account-field-username' /}
+
+    <div class="field-group">
+        {call aui.form.label}
+            {param forField : $id /}
+            {param content : getText('setup.account.form.username') /}
+        {/call}
+        {call aui.form.input}
+            {param extraAttributes: [
+                'placeholder': getText('setup.account.form.username.placeholder')
+            ] /}
+            {param extraClasses: 'jira-setup-account-form-field' /}
+            {param id: $id /}
+            {param type: 'text' /}
+        {/call}
+        {call aui.form.fieldError}
+            {param extraClasses: 'hidden'/}
+            {param message: '' /}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * Template for common password field
+ */
+{template .passwordField}
+    {let $id: 'jira-setup-account-field-password' /}
+
+    <div class="field-group">
+        {call aui.form.label}
+            {param forField : $id /}
+            {param content : getText('setup.account.form.password') /}
+        {/call}
+        {call aui.form.input}
+            {param extraAttributes: [
+                'placeholder': getText('setup.account.form.password.placeholder')
+            ] /}
+            {param extraClasses: 'jira-setup-account-form-field' /}
+            {param id: $id /}
+            {param type: 'password' /}
+        {/call}
+        {call aui.form.fieldError}
+            {param extraClasses: 'hidden'/}
+            {param message: '' /}
+        {/call}
+    </div>
+{/template}
+
+/**
+ * Template for common retype password field
+ */
+{template .passwordRetypeField}
+    {let $id: 'jira-setup-account-field-retype-password' /}
+
+    <div class="field-group">
+        {call aui.form.label}
+            {param forField : $id /}
+            {param content : getText('setup.account.form.retype.password') /}
+        {/call}
+        {call aui.form.input}
+            {param extraAttributes: [
+                'placeholder': getText('setup.account.form.retype.password.placeholder')
+            ] /}
+            {param extraClasses: 'jira-setup-account-form-field' /}
+            {param id: $id /}
+            {param type: 'password' /}
+        {/call}
+        {call aui.form.fieldError}
+            {param extraClasses: 'hidden'/}
+            {param message: '' /}
+        {/call}
+    </div>
+{/template}

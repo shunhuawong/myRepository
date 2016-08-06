@@ -1,0 +1,14 @@
+<atlassian-plugin name='JIRA Feature Keys' key='jira.feature.keys' i18n-name-key="feature.keys.plugin.name">
+    <plugin-info>
+        <description key="feature.keys.plugin.desc">This plugin registers feature keys supplied by JIRA.</description>
+        <vendor name="Atlassian" url="http://www.atlassian.com"/>
+        <application-version min="7.0"/>
+        <version>1.0</version>
+    </plugin-info>
+
+    <featureflags key="jira.shared.portalpage.search.flags.key" class="com.atlassian.jira.portal.DefaultPortalPageManager"/>
+    <featureflags key="jira.searchrequest.database.search.feature.flag.key" class="com.atlassian.jira.issue.search.DefaultSearchRequestManager"/>
+    <featureflags key="jira.issue.search.jql.lucene.syntax.usage.flag.key" class="com.atlassian.jira.issue.search.providers.DualSearchProvider"/>
+    <featureflags key="jira.instrumentation.laas.feature.flag.key" class="com.atlassian.jira.instrumentation.DefaultInstrumentationLogger"/>
+    <featureflags key="jira.issue.search.jql.timing.flags.key" class="com.atlassian.jira.issue.search.providers.DualSearchProvider"/>
+</atlassian-plugin>

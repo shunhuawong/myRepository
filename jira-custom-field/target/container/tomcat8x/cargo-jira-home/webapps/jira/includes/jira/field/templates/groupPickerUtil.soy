@@ -1,0 +1,32 @@
+{namespace JIRA.Templates.GroupPickerUtil}
+
+/**
+ * @param html Group suggestion name with highlighted substring
+ * @param labels Labels for given group "ADMIN", "JIRA CORE" etc.
+ */
+{template .formatResponseWithLabels}
+    {call .formatResponse data="all"}
+        {param showLabels: true /}
+    {/call}
+{/template}
+
+/**
+ * @param html Group suggestion name with highlighted substring
+ * @param labels Labels for given group "ADMIN", "JIRA CORE" etc.
+ * @param? showLabels Show group label lozenges
+ */
+{template .formatResponse}
+    <div class="group-suggestion-item">
+        <span class="group-suggestion-item__name">{$html|noescape}</span>
+        {if $showLabels}
+            <span class="group-suggestion-item__labels group-labels-lozenges">
+                {foreach $label in $labels}
+                    {call JIRA.Templates.groupLabelLozenge}
+                        {param label: $label /}
+                    {/call}
+                    {sp}
+                {/foreach}
+            </span>
+        {/if}
+    </div>
+{/template}

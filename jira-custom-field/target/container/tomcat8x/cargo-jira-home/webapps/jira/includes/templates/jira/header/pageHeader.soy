@@ -1,0 +1,55 @@
+{namespace JIRA.Templates.Headers}
+
+/**
+ * @param mainContent the actual header. Should include an <hX> element. Can also add breadcrumbs etc. here.
+ * @param? imageContent optional container for avatars / images / etc. Appears to the left of the main content.
+ * @param? actionsContent optional container for buttons / links / etc. Appears to the right of the main content.
+ * @param? helpContent optional help link.
+ * @param? id optional identifier for the page header.
+ * @param? tagName optional name for the root tag. Default is 'header'.
+ */
+{template .pageHeader}
+<{$tagName ? $tagName : 'header'} class="aui-page-header"{if $id} id="{$id}"{/if}>
+    <div class="aui-page-header-inner">
+        {if $imageContent}
+            <div class="aui-page-header-image">
+                {$imageContent|noAutoescape}
+            </div>
+        {/if}
+        <div class="aui-page-header-main">
+            {$mainContent|noAutoescape}
+        </div>
+        {if $actionsContent or $helpContent}
+            <div class="aui-page-header-actions">
+                {if $actionsContent}{$actionsContent|noAutoescape}{/if}
+                {if $helpContent}{$helpContent|noAutoescape}{/if}
+            </div>
+        {/if}
+    </div>
+</{$tagName ? $tagName : 'header'}>
+{/template}
+
+/**
+ * Render a project avatar, optionally with the project shortcuts enabled.
+ * @param? id the ID of the project avatar section.
+ * @param avatarAlt the alternative text for the avatar image.
+ * @param avatarUrl the (absolute or root-relative) location of the avatar. If relative, ensure the baseUrl is already prepended.
+ * @param? isSystemAvatar set to true if the avatar is a system-supplied avatar as opposed to a user-uploaded / custom one.
+ * @param? projectTypeIcon A base64 representation of the image for the type of the project.
+ */
+{template .projectAvatar}
+    <span
+        {if $id} id="{$id}"{/if}
+        {sp}class="aui-avatar aui-avatar-large aui-avatar-project
+            {if $isSystemAvatar} jira-system-avatar{/if}
+            {call aui.renderExtraClasses data="all" /}"
+        {call aui.renderExtraAttributes data="all" /}
+    >
+        <span class="aui-avatar-inner">
+            <img id="project-avatar" alt="{getText('admin.common.words.project.uploaded.image', $avatarAlt)}" src="{$avatarUrl|noAutoescape}" />
+        </span>
+        {if $projectTypeIcon}
+            <img src="data:image/svg+xml;base64,{$projectTypeIcon}" class="jira-project-avatar-icon" />
+        {/if}
+    </span>
+{/template}

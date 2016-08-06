@@ -1,0 +1,32 @@
+@import "../../../ui/imports/aui-colours";
+
+.application-picker {
+    // This is here only to overcome AUI bug causing invisible
+    // InlineDialog2s to take up space on the screen
+    overflow: hidden;
+
+    &-applications {
+        .checkbox:first-child {
+            margin-top: 0;
+            padding-top: 5px;
+        }
+
+        .application-warning {
+            position: absolute;
+            left: -2px;
+        }
+    }
+
+    label.application-label.disabled {
+        color: @aui-color-gray;
+        cursor: not-allowed;
+    }
+}
+
+.application-picker-dialog {
+    .aui-inline-dialog-contents {
+        width: 200px;
+        padding: 10px;
+        font-size: 12px;
+    }
+}

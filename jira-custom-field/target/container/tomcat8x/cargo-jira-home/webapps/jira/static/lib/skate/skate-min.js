@@ -1,0 +1,1 @@
+define("jira/skate",["atlassian/libs/skate-0.12.6"],function(skate){function jiraSkate(id,component){return skate(id,component)}jiraSkate.type=skate.type||{CLASSNAME:skate.types.CLASS,ELEMENT:skate.types.TAG,ATTRIBUTE:skate.types.ATTR};jiraSkate.init=function(nodes){skate.init(nodes);if(window.skate&&window.skate.init){window.skate.init(nodes)}return nodes};return jiraSkate});

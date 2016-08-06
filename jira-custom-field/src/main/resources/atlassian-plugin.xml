@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="${atlassian.plugin.key}" name="${project.name}" plugins-version="2">
+  <plugin-info>
+    <description>${project.description}</description>
+    <version>${project.version}</version>
+    <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+    <param name="plugin-icon">images/pluginIcon.png</param>
+    <param name="plugin-logo">images/pluginLogo.png</param>
+  </plugin-info>
+  <!-- add our i18n resource -->
+  <resource type="i18n" name="i18n" location="jira-custom-field"/>
+  <!-- add our web resources -->
+  <web-resource key="jira-custom-field-resources" name="jira-custom-field Web Resources">
+    <dependency>com.atlassian.auiplugin:ajs</dependency>
+    <resource type="download" name="jira-custom-field.css" location="/css/jira-custom-field.css"/>
+    <resource type="download" name="jira-custom-field.js" location="/js/jira-custom-field.js"/>
+    <resource type="download" name="images/" location="/images"/>
+    <context>jira-custom-field</context>
+  </web-resource>
+  <customfield-type key="admintextfield" name="Admin Editable Text Field" class="com.atlassian.jira.plugin.customfield.example.JiraCustomField">
+    <description>A text field only editable by those with admin permissions</description>
+    <resource type="velocity" name="view" location="templates/plugins/fields/view/view-basictext.vm"/>
+    <resource type="velocity" name="edit" location="templates/edit-jiraadminonlytext.vm"/>
+    <resource type="velocity" name="xml" location="templates/plugins/fields/xml/xml-basictext.vm"/>
+  </customfield-type>
+  <customfield-type name="Jira Custom Field" i18n-name-key="jira-custom-field.name" key="jira-custom-field" class="com.atlassian.jira.plugin.customfield.example.JiraCustomField">
+    <description key="jira-custom-field.description">The Jira Custom Field Plugin</description>
+    <resource name="view" type="velocity" location="/templates/customfields/jira-custom-field/view.vm"/>
+    <resource name="edit" type="velocity" location="/templates/customfields/jira-custom-field/edit.vm"/>
+  </customfield-type>
+</atlassian-plugin>

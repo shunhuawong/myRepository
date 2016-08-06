@@ -1,0 +1,19 @@
+{namespace JIRA.Templates.Flags.Admin}
+
+/**
+ * Render the title of the flag indicating the admin has no use access.
+ */
+{template .adminIssueAccessFlagTitle}
+{getText('flag.admin.no.projects.title')}
+{/template}
+
+/**
+ * Render the body of the flag indicating the admin has no use access.
+ * @param manageAccessUrl the URL for the manage access page.
+ */
+{template .adminIssueAccessFlagBody}
+    {let $start}<a href="{contextPath()}/{$manageAccessUrl}">{/let}
+    {let $end}</a>{/let}
+    <p id="admin-noprojects">{getText('flag.admin.no.projects.msg')}</p>
+    <p><a href="{contextPath()}/{$manageAccessUrl}">{getText('flag.admin.no.projects.msg.link')}</a></p>
+{/template}
