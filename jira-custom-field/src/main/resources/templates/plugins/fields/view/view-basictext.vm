@@ -1,7 +1,0 @@
-#if ($value)
-  #if (${displayParameters.excel_view})
-    $textutils.br($textutils.htmlEncode($!value.toString(), false))
-  #else
-    $jirakeyutils.linkBugKeys($textutils.plainTextToHtml($!value.toString()))
-  #end
-#end

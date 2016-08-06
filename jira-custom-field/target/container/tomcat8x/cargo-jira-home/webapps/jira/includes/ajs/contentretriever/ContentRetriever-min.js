@@ -1,1 +1,0 @@
-define("jira/ajs/contentretriever/content-retriever",["jira/lib/class","jquery"],function(Class,jQuery){return Class.extend({startingRequest:jQuery.noop,finishedRequest:jQuery.noop,cache:jQuery.noop,isLocked:jQuery.noop,content:jQuery.noop})});AJS.namespace("AJS.ContentRetriever",null,require("jira/ajs/contentretriever/content-retriever"));

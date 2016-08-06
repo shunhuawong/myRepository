@@ -1,1 +1,0 @@
-JIRA.NumberFormatter={format:function(integer){var groupSeparator=AJS.Meta.get("user-locale-group-separator")||"";return integer.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,groupSeparator)}};

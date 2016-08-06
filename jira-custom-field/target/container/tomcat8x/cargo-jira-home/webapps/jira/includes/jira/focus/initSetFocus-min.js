@@ -1,1 +1,0 @@
-(function(jQuery,setFocus){jQuery(function(){setFocus.triggerFocus()})})(require("jquery"),require("jira/focus/set-focus"));

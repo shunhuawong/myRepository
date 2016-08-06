@@ -1,4 +1,0 @@
-<mail-config>
-	<manager class="com.atlassian.mail.server.managers.OFBizMailServerManager" />
-    <settings class="com.atlassian.jira.mail.settings.ApplicationSettingsForwardingImplementation"/>
-</mail-config>

@@ -1,1 +1,0 @@
-AJS={$:jQuery};

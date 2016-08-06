@@ -1,1 +1,0 @@
-AJS.namespace("JIRA.trace",window,function(){});

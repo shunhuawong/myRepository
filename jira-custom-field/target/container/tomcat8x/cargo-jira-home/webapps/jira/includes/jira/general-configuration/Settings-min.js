@@ -1,1 +1,0 @@
-JIRA.Settings={};JIRA.Settings.ApplicationTitle={get:function(){return AJS.Meta.get("app-title")}};

@@ -1,1 +1,0 @@
-define("jira/shifter/shifter-group",["jquery"],function(jQuery){return{name:"",weight:-1,getSuggestions:function(args){return jQuery.Deferred()},onSelection:jQuery.noop}});

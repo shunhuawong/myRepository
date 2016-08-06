@@ -1,1 +1,0 @@
-AJS.$(function(){AJS.$.fn.isDirty=function(){};AJS.$("#fetchLicense").click(function(e){e.preventDefault();AJS.$("#upm-plugin-button-form").submit()})});

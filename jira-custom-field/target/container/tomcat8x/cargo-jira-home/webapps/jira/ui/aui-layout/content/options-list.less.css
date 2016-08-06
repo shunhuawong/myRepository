@@ -1,1 +1,0 @@
-ul.optionslist{margin:0}ul.optionslist>li{font-weight:bold}ul.optionslist>li>ul{display:block;font-weight:normal;list-style:none;margin:0;padding:0}ul.optionslist>li>ul>li{display:inline}ul.optionslist>li>ul>li:before{content:", "}ul.optionslist>li>ul>li:first-child:before{content:none}

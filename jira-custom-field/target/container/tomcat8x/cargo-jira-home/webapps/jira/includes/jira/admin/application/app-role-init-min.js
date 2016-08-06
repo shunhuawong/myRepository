@@ -1,1 +1,0 @@
-require(["jquery","jira/admin/application/approleseditor"],(function($,ApplicationRoles){$(function(){new ApplicationRoles({el:"#application-roles"})})}));

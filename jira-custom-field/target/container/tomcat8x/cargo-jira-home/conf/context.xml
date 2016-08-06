@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<Context>
-  <Resource name="jdbc/JiraDS" type="javax.sql.DataSource" auth="Container" driverClassName="org.h2.Driver" factory="org.apache.tomcat.dbcp.dbcp2.BasicDataSourceFactory" password="" url="jdbc:h2:file:D:/Jira/jira-custom-field/target/jira/home/database/h2db" username="sa"/>
-  <Resource name="UserTransaction" type="javax.transaction.UserTransaction" auth="Container" factory="org.objectweb.jotm.UserTransactionFactory" jotm.timeout="60"/>
-</Context>
